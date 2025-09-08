@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Views/auth/login_screen.dart';
 import 'package:talk/firebase_options.dart';
 
+import 'Views/BottomNav/bottomnav.dart';
 import 'Views/HomeScreen/homescreen.dart';
 
 void main() async {
@@ -39,7 +40,7 @@ class MyApp extends StatelessWidget {
             useMaterial3: true,
           ),
           home: FirebaseAuth.instance.currentUser != null
-              ? const HomeScreen() // User already logged in
+              ? const BottomNavBar() // User already logged in
               : const LoginScreen(), // User not logged in
         );
       },

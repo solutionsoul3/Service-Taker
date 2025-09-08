@@ -123,7 +123,7 @@ class _HomeScreenState extends State<HomeScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildHeader(),
-            SizedBox(height: 20.h),
+            SizedBox(height: 50.h),
             ImageCarousel(
               pageController: _pageController,
               imagePaths: _imagePaths,
@@ -210,120 +210,122 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildHeader() {
-    return Container(
-      height: 270.h,
-      width: double.infinity,
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20.r),
-          bottomRight: Radius.circular(20.r),
-        ),
-        gradient: const LinearGradient(
-          colors: [AppColors.logocolor, AppColors.logocolor],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            height: 30.h,
-          ),
-          IconButton(
-            icon: const Icon(
-              Icons.menu,
-              color: Colors.white,
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Container(
+          height: 220.h,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.only(
+              bottomLeft: Radius.circular(20.r),
+              bottomRight: Radius.circular(20.r),
             ),
-            onPressed: () {
-              _scaffoldKey.currentState?.openDrawer();
-            },
-          ),
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 15.w,
+            gradient: const LinearGradient(
+              colors: [AppColors.logocolor, AppColors.logocolor],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-            child: Text(
-              'Welcome',
-              style: TextStyle(
-                fontSize: 14.sp,
-                color: Colors.white,
-                fontFamily: 'Urbanist',
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SizedBox(height: 30.h),
+              IconButton(
+                icon: const Icon(Icons.menu, color: Colors.white),
+                onPressed: () {
+                  _scaffoldKey.currentState?.openDrawer();
+                },
               ),
-            ),
-          ),
-          SizedBox(height: 10.h),
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 15.w,
-            ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  currentUser != null ? currentUser!.name : 'Loading...',
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15.w),
+                child: Text(
+                  'Welcome',
                   style: TextStyle(
-                    fontSize: 19.sp,
-                    color: Colors.white,
-                    fontWeight: FontWeight.bold,
-                    fontFamily: 'Urbanist',
-                  ),
-                ),
-                GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const NotificationScreen()),
-                      );
-                    },
-                    child:
-                        const Icon(Icons.notifications, color: Colors.white)),
-              ],
-            ),
-          ),
-          SizedBox(height: 10.h),
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 15.w,
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.location_on, color: Colors.white),
-                SizedBox(width: 8.w),
-                Text(
-                  'Lahore, Pakistan',
-                  style: TextStyle(
-                    fontSize: 16.sp,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 14.sp,
                     color: Colors.white,
                     fontFamily: 'Urbanist',
                   ),
                 ),
-                SizedBox(width: 8.w),
-                const Icon(Icons.arrow_drop_down, color: Colors.white),
-              ],
-            ),
+              ),
+              SizedBox(height: 10.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15.w),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      currentUser != null ? currentUser!.name : 'Loading...',
+                      style: TextStyle(
+                        fontSize: 19.sp,
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                        fontFamily: 'Urbanist',
+                      ),
+                    ),
+                    GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const NotificationScreen(),
+                          ),
+                        );
+                      },
+                      child: const Icon(Icons.notifications, color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(height: 10.h),
+              Padding(
+                padding: EdgeInsets.symmetric(horizontal: 15.w),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on, color: Colors.white),
+                    SizedBox(width: 8.w),
+                    Text(
+                      'Lahore, Pakistan',
+                      style: TextStyle(
+                        fontSize: 16.sp,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                        fontFamily: 'Urbanist',
+                      ),
+                    ),
+                    SizedBox(width: 8.w),
+                    const Icon(Icons.arrow_drop_down, color: Colors.white),
+                  ],
+                ),
+              ),
+            ],
           ),
-          SizedBox(height: 20.h),
-          Padding(
-            padding: EdgeInsets.symmetric(
-              horizontal: 15.w,
-            ),
-            child: _buildSearchBar(),
-          ),
-        ],
-      ),
+        ),
+        Positioned(
+          bottom: -25.h, // half outside
+          left: 15.w,
+          right: 15.w,
+          child: _buildSearchBar(),
+        ),
+      ],
     );
   }
 
   Widget _buildSearchBar() {
     return Container(
-      height: 50.h,
+      height: 55.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(10.r),
         border: Border.all(color: Colors.white, width: 1),
         color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15), // light shadow
+            blurRadius: 8, // soft blur
+            offset: const Offset(0, 4), // move shadow down
+            spreadRadius: 1, // spread a little
+          ),
+        ],
       ),
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: 16.w),

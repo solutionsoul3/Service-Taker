@@ -24,7 +24,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     const MyBookingScreen(),
     const FavScreen(),
     WhatsAppStyleScreen(),
-    const MyBookingScreen(),
+    // const MyBookingScreen(),
     const AboutScreen(),
   ];
 
@@ -75,16 +75,16 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 ),
                 label: 'Home',
               ),
-              BottomNavigationBarItem(
-                icon: SvgPicture.asset(
-                  AppImages.bookingicon,
-                  color:
-                      _selectedIndex == 1 ? AppColors.logocolor : Colors.grey,
-                  height: 24.0,
-                  width: 24.0,
-                ),
-                label: 'Bookings',
-              ),
+              // BottomNavigationBarItem(
+              //   icon: SvgPicture.asset(
+              //     AppImages.bookingicon,
+              //     color:
+              //         _selectedIndex == 1 ? AppColors.logocolor : Colors.grey,
+              //     height: 24.0,
+              //     width: 24.0,
+              //   ),
+              //   label: 'Bookings',
+              // ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
                   AppImages.favicon,
