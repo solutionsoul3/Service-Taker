@@ -3,12 +3,13 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:intl/intl.dart';
 import 'package:talk/Models/UserModel.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/utility/user_service.dart';
+
+import '../../utility/custom-intl.dart';
 
 class FeedBackScreen extends StatefulWidget {
   const FeedBackScreen({super.key});
@@ -66,8 +67,7 @@ class _FeedBackScreenState extends State<FeedBackScreen> {
     }
 
     try {
-      String timestamp =
-          DateFormat('yyyy-MM-dd HH:mm:ss').format(DateTime.now());
+      String timestamp = DateFormatter.formatDateTime(DateTime.now());
 
       QuerySnapshot adminDocs =
           await FirebaseFirestore.instance.collection('Admin').get();

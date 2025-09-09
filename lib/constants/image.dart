@@ -15,6 +15,12 @@ class AppImages {
   static const String moderatorservice = 'assets/icons/moderator.png';
   static const String electrician = 'assets/icons/electrician.png';
 
+  static const String plumber = 'assets/images/services/plumber.jpg';
+  static const String handman = 'assets/images/services/handman.jpg';
+  static const String service = 'assets/images/services/electrician.jpg';
+  static const String construction = 'assets/images/services/construction.jpg';
+
+
   static const String person1 = 'assets/images/person1.jpg';
   static const String person6 = 'assets/images/dishwasher.png';
   static const String person2 = 'assets/images/person2.png';

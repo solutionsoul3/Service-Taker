@@ -1,9 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:intl/intl.dart';
 import 'package:talk/Models/ProviderModel.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/widgets/customcontainer.dart';
+
+import '../../utility/custom-intl.dart';
 
 class ChatWithUser extends StatefulWidget {
   final ProviderModel provider;
@@ -25,15 +26,17 @@ class _ChatWithUserState extends State<ChatWithUser> {
     final message = _messageController.text;
     if (message.isNotEmpty) {
       final timestamp = DateTime.now(); // Use DateTime object for sorting
-      final formattedDate = DateFormat('dd MMM yyyy').format(timestamp);
-      final formattedTime = DateFormat('hh:mm a').format(timestamp);
+      final formattedDate = DateFormatter.formatReadableDate(timestamp);
+      final formattedTime = DateFormatter.formatTime12h(timestamp);
+
       setState(() {
         _messages.insert(0, {
           'message': message,
           'timestamp': formattedTime,
           'date': formattedDate,
-        }); // Add the message and timestamp to the beginning of the list
+        });
       });
+
       _messageController.clear(); // Clear the text field
     }
   }

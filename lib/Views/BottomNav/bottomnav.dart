@@ -8,6 +8,8 @@ import 'package:talk/Views/ProfileScreen/aboutscreen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 
+import '../Explore_Screen/explore-screen.dart';
+
 class BottomNavBar extends StatefulWidget {
   const BottomNavBar({super.key});
 
@@ -21,7 +23,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
   // List of widget pages for the BottomNavigationBar
   static final List<Widget> _pages = <Widget>[
     const HomeScreen(),
-    const MyBookingScreen(),
+    const ExploreScreen(),
     const FavScreen(),
     WhatsAppStyleScreen(),
     // const MyBookingScreen(),
@@ -69,7 +71,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 icon: SvgPicture.asset(
                   AppImages.homeicon,
                   color:
-                      _selectedIndex == 0 ? AppColors.logocolor : Colors.grey,
+                  _selectedIndex == 0 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
                 ),
@@ -89,7 +91,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 icon: SvgPicture.asset(
                   AppImages.favicon,
                   color:
-                      _selectedIndex == 2 ? AppColors.logocolor : Colors.grey,
+                  _selectedIndex == 2 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
                 ),
@@ -99,7 +101,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 icon: SvgPicture.asset(
                   AppImages.chaticon,
                   color:
-                      _selectedIndex == 3 ? AppColors.logocolor : Colors.grey,
+                  _selectedIndex == 3 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
                 ),
@@ -109,7 +111,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 icon: SvgPicture.asset(
                   AppImages.callhistoryicon,
                   color:
-                      _selectedIndex == 4 ? AppColors.logocolor : Colors.grey,
+                  _selectedIndex == 4 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
                 ),
@@ -119,7 +121,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                 icon: SvgPicture.asset(
                   AppImages.personicon,
                   color:
-                      _selectedIndex == 5 ? AppColors.logocolor : Colors.grey,
+                  _selectedIndex == 5 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
                 ),

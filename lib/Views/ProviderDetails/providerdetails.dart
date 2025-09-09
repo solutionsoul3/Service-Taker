@@ -706,13 +706,13 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              CommentScreen(providerId: widget.provider.id),
-                        ),
-                      );
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (context) =>
+                      //         CommentScreen(providerId: widget.provider.id),
+                      //   ),
+                      // );
                     },
                     child: Text(
                       'Reviews($reviewCount)',

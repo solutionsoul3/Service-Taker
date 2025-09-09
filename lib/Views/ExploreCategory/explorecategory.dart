@@ -4,6 +4,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Models/ProviderModel.dart';
 import 'package:talk/Views/ProviderDetails/providerdetails.dart';
 import 'package:talk/constants/colors.dart';
+import 'package:talk/constants/image.dart';
 import 'package:talk/widgets/reusableboxdecoration.dart';
 import 'package:talk/widgets/textfields.dart';
 
@@ -22,92 +23,83 @@ class ExploreCategory extends StatefulWidget {
 class _ExploreCategoryState extends State<ExploreCategory>
     with SingleTickerProviderStateMixin {
   List<ProviderModel> providers = [];
-  List<ProviderModel> filteredProviders = []; // For filtered results
+  List<ProviderModel> filteredProviders = [];
   TextEditingController searchController = TextEditingController();
+  String selectedSortOption = '';
+  double _scaleFactor = 1.0;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-
-    // Static list of providers
-    providers = [
-      ProviderModel(
-        id: '1',
-        fullName: 'Ali Khan',
-        email: 'ali@example.com',
-        contactNumber: '03001234567',
-        formFilled: true,
-        location: 'Lahore',
-        service: 'Electrician',
-        status: 'active',
-        pricePerHour: 1500,
-        experience: '5',
-        description: 'Expert electrician for all types of wiring and repair.',
-        experienceDescription: '5 years of residential and commercial work.',
-        imageUrl: 'assets/images/homepics/slider1.jpg', // Online image
-      ),
-      ProviderModel(
-        id: '2',
-        fullName: 'Sara Ahmed',
-        email: 'sara@example.com',
-        contactNumber: '03007654321',
-        formFilled: true,
-        location: 'Karachi',
-        service: 'Plumber',
-        status: 'active',
-        pricePerHour: 1200,
-        experience: '3',
-        description: 'Professional plumber available 24/7.',
-        experienceDescription: 'Worked on 100+ plumbing projects.',
-        imageUrl: 'assets/images/homepics/slider2.jpg',
-      ),
-      ProviderModel(
-        id: '3',
-        fullName: 'Usman Iqbal',
-        email: 'usman@example.com',
-        contactNumber: '03111234567',
-        formFilled: true,
-        location: 'Islamabad',
-        service: 'Painter',
-        status: 'active',
-        pricePerHour: 2000,
-        experience: '7',
-        description: 'Certified house painter & decorator.',
-        experienceDescription: '7 years of professional painting services.',
-        imageUrl: 'assets/images/homepics/slider3.jpg',
-      ),
-    ];
-
-    filteredProviders = providers;
+    _loadProviders();
   }
 
-  String selectedSortOption = ''; // Holds the currently selected sorting option
+  Future<void> _loadProviders() async {
+    setState(() {
+      _isLoading = true;
+    });
 
-  Future<void> fetchProviders() async {
-    final QuerySnapshot snapshot = await FirebaseFirestore.instance
-        .collection('Provider')
-        .where('category', isEqualTo: widget.category.catename)
-        .get();
-
-    print(
-        "Fetched ${snapshot.docs.length} providers for category: ${widget.category.catename}");
-
-    final List<ProviderModel> fetchedProviders = snapshot.docs
-        .map((doc) =>
-            ProviderModel.fromMap(doc.data() as Map<String, dynamic>, doc.id))
-        .toList();
+    // Static list of providers
+    await Future.delayed(const Duration(milliseconds: 800)); // Simulate loading
 
     setState(() {
-      providers = fetchedProviders;
-      filteredProviders = providers; // Initially display all providers
+      providers = [
+        ProviderModel(
+          id: '1',
+          fullName: 'Ali Khan',
+          email: 'ali@example.com',
+          contactNumber: '03001234567',
+          formFilled: true,
+          location: 'Lahore',
+          service: 'Electrician',
+          status: 'active',
+          pricePerHour: 1500,
+          experience: '5',
+          description: 'Expert electrician for all types of wiring and repair.',
+          experienceDescription: '5 years of residential and commercial work.',
+          imageUrl: AppImages.person1,
+        ),
+        ProviderModel(
+          id: '2',
+          fullName: ' Ahmed',
+          email: 'sara@example.com',
+          contactNumber: '03007654321',
+          formFilled: true,
+          location: 'Karachi',
+          service: 'Plumber',
+          status: 'active',
+          pricePerHour: 1200,
+          experience: '3',
+          description: 'Professional plumber available 24/7.',
+          experienceDescription: 'Worked on 100+ plumbing projects.',
+          imageUrl: AppImages.person2,
+        ),
+        ProviderModel(
+          id: '3',
+          fullName: 'Usman Iqbal',
+          email: 'usman@example.com',
+          contactNumber: '03111234567',
+          formFilled: true,
+          location: 'Islamabad',
+          service: 'Painter',
+          status: 'active',
+          pricePerHour: 2000,
+          experience: '7',
+          description: 'Certified house painter & decorator.',
+          experienceDescription: '7 years of professional painting services.',
+          imageUrl: AppImages.person3,
+        ),
+      ];
+      filteredProviders = providers;
+      _isLoading = false;
     });
   }
 
   void filterProviders(String query) {
     if (query.isEmpty) {
       setState(() {
-        filteredProviders =
-            providers; // Reset to full list when search is empty
+        filteredProviders = providers;
       });
       return;
     }
@@ -128,132 +120,105 @@ class _ExploreCategoryState extends State<ExploreCategory>
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(50.r)),
-      ),
+      backgroundColor: Colors.transparent,
       builder: (BuildContext context) {
-        return AnimatedContainer(
-          duration: const Duration(milliseconds: 1100),
-          curve: Curves.easeInOutCubicEmphasized,
-          padding: EdgeInsets.only(left: 5.w, right: 5.w, top: 20.h),
-          height: 350.h,
+        return Container(
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.only(
+              topLeft: Radius.circular(30.r),
+              topRight: Radius.circular(30.r),
+            ),
+          ),
+          padding: EdgeInsets.only(
+            top: 20.h,
+            left: 20.w,
+            right: 20.w,
+            bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
+          ),
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              Center(
+                child: Container(
+                  width: 40.w,
+                  height: 5.h,
+                  decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(3.r),
+                  ),
+                ),
+              ),
+              SizedBox(height: 20.h),
               Text(
-                'Sort by:',
+                'Sort by',
                 style: TextStyle(
-                  fontSize: 18.sp,
+                  fontSize: 22.sp,
                   fontWeight: FontWeight.bold,
                   fontFamily: 'Urbanist',
                   color: Colors.black,
                 ),
               ),
-              SizedBox(height: 10.h),
-              RadioListTile<String>(
-                activeColor: AppColors.logocolor, // Different active color
-                title: Row(
-                  children: [
-                    Text(
-                      'Ascending order of Price',
-                      style: TextStyle(
-                        color: AppColors.logocolor,
-                        fontFamily: 'Urbanist',
-                        fontSize: 16.sp,
-                      ),
-                    ),
-                    const Icon(Icons.attach_money, color: AppColors.logocolor),
-                  ],
-                ),
-                value: 'priceAsc',
-                groupValue: selectedSortOption,
-                onChanged: (value) {
-                  setState(() {
-                    selectedSortOption = value!;
-                  });
-                  sortProvidersByPrice(ascending: true);
-                  Navigator.pop(context); // Close modal
-                },
-              ),
-              RadioListTile<String>(
-                activeColor: AppColors.logocolor, // Different active color
-                title: Row(
-                  children: [
-                    Text(
-                      'Descending order of Price',
-                      style: TextStyle(
-                        color: AppColors.logocolor,
-                        fontFamily: 'Urbanist',
-                        fontSize: 16.sp,
-                      ),
-                    ),
-                    const Icon(Icons.attach_money, color: AppColors.logocolor),
-                  ],
-                ),
-                value: 'priceDesc',
-                groupValue: selectedSortOption,
-                onChanged: (value) {
-                  setState(() {
-                    selectedSortOption = value!;
-                  });
-                  sortProvidersByPrice(ascending: false);
-                  Navigator.pop(context); // Close modal
-                },
-              ),
-              RadioListTile<String>(
-                activeColor: AppColors.logocolor, // Different active color
-                title: Row(
-                  children: [
-                    Text(
-                      'Ascending order of Experience',
-                      style: TextStyle(
-                        color: AppColors.logocolor,
-                        fontFamily: 'Urbanist',
-                        fontSize: 16.sp,
-                      ),
-                    ),
-                    const Icon(Icons.star, color: AppColors.logocolor),
-                  ],
-                ),
-                value: 'experienceAsc',
-                groupValue: selectedSortOption,
-                onChanged: (value) {
-                  setState(() {
-                    selectedSortOption = value!;
-                  });
-                  sortProvidersByExperience(ascending: true);
-                  Navigator.pop(context); // Close modal
-                },
-              ),
-              RadioListTile<String>(
-                activeColor: AppColors.logocolor, // Different active color
-                title: Row(
-                  children: [
-                    Text(
-                      'Descending order of Experience',
-                      style: TextStyle(
-                        color: AppColors.logocolor,
-                        fontFamily: 'Urbanist',
-                        fontSize: 16.sp,
-                      ),
-                    ),
-                    const Icon(Icons.star, color: AppColors.logocolor),
-                  ],
-                ),
-                value: 'experienceDesc',
-                groupValue: selectedSortOption,
-                onChanged: (value) {
-                  setState(() {
-                    selectedSortOption = value!;
-                  });
-                  sortProvidersByExperience(ascending: false);
-                  Navigator.pop(context); // Close modal
-                },
-              ),
+              SizedBox(height: 20.h),
+              _buildFilterOption('priceAsc', 'Price: Low to High', Icons.arrow_upward),
+              _buildFilterOption('priceDesc', 'Price: High to Low', Icons.arrow_downward),
+              _buildFilterOption('experienceAsc', 'Experience: Low to High', Icons.star_border),
+              _buildFilterOption('experienceDesc', 'Experience: High to Low', Icons.star),
+              SizedBox(height: 20.h),
             ],
           ),
         );
       },
+    );
+  }
+
+  Widget _buildFilterOption(String value, String title, IconData icon) {
+    return Padding(
+      padding: EdgeInsets.only(bottom: 10.h),
+      child: Container(
+        decoration: BoxDecoration(
+          color: selectedSortOption == value ? AppColors.logocolor.withOpacity(0.1) : Colors.grey[50],
+          borderRadius: BorderRadius.circular(12.r),
+        ),
+        child: RadioListTile<String>(
+          activeColor: AppColors.logocolor,
+          contentPadding: EdgeInsets.symmetric(horizontal: 10.w),
+          title: Row(
+            children: [
+              Icon(icon, color: AppColors.logocolor, size: 20.sp),
+              SizedBox(width: 10.w),
+              Text(
+                title,
+                style: TextStyle(
+                  color: Colors.black87,
+                  fontFamily: 'Urbanist',
+                  fontSize: 16.sp,
+                ),
+              ),
+            ],
+          ),
+          value: value,
+          groupValue: selectedSortOption,
+          onChanged: (value) {
+            setState(() {
+              selectedSortOption = value!;
+            });
+
+            if (value == 'priceAsc') {
+              sortProvidersByPrice(ascending: true);
+            } else if (value == 'priceDesc') {
+              sortProvidersByPrice(ascending: false);
+            } else if (value == 'experienceAsc') {
+              sortProvidersByExperience(ascending: true);
+            } else if (value == 'experienceDesc') {
+              sortProvidersByExperience(ascending: false);
+            }
+
+            Navigator.pop(context);
+          },
+        ),
+      ),
     );
   }
 
@@ -281,345 +246,442 @@ class _ExploreCategoryState extends State<ExploreCategory>
     });
   }
 
-  double _scaleFactor = 1.0;
   @override
   Widget build(BuildContext context) {
-    final category = widget.category; // Access the passed category data
+    final category = widget.category;
 
     return Scaffold(
       backgroundColor: AppColors.bgcolor,
-      body: Stack(
-        children: [
-          BackgroundContainer(
-            child: Padding(
-              padding: EdgeInsets.only(top: 350.h),
-              child: Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20.w),
-                child: const Column(
-                  children: [],
-                ),
-              ),
-            ),
-          ),
-          Container(
-            height: 250.h,
-            width: double.infinity,
-            decoration: BoxDecoration(
-              color: AppColors.logocolor,
-              borderRadius: BorderRadius.only(
-                bottomLeft: Radius.circular(20.r),
-                bottomRight: Radius.circular(20.r),
-              ),
-            ),
-            child: Padding(
-              padding: EdgeInsets.only(top: 50.h),
-              child: Column(
-                children: [
-                  Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w),
-                    child: Stack(
-                      children: [
-                        Align(
-                          alignment: Alignment.center,
-                          child: Text(
-                            category['catename'],
-                            // Use category name
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'Urbanist',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.pop(context);
-                            },
-                            child: const Icon(
-                              Icons.arrow_back_ios,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  SizedBox(height: 20.h),
-                  Image.asset(
-                    category['imageURL'],
-                    fit: BoxFit.cover,
-                    height: 50.h,
-                    width: 50.w,
-                    color: Colors.white,
-                  ),
-                  SizedBox(height: 20.h),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Row(
-                        children: [
-                          SizedBox(
-                            width: 100.w,
-                          ),
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.white,
-                            size: 24.sp,
-                          ),
-                          SizedBox(width: 8.sp),
-                          Text(
-                            "Lahore, Pakistan",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontFamily: 'Urbanist',
-                              fontSize: 16.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          Icon(
-                            Icons.location_on,
-                            color: Colors.transparent,
-                            size: 24.sp,
-                          ),
-                        ],
-                      ),
-                    ],
-                  )
-                ],
-              ),
-            ),
-          ),
-          Positioned(
-            top: 220.h,
-            left: 40.w,
-            child: Container(
-              height: 50.h,
-              width: 320.w,
+      body: CustomScrollView(
+        slivers: [
+          // Modern App Bar Section
+          SliverAppBar(
+            expandedHeight: 180.h,
+            floating: false,
+            pinned: true,
+            backgroundColor: Colors.white,
+            elevation: 2,
+            leading: Container(
+              margin: EdgeInsets.only(left: 16.w, top: 8.h),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(10.r),
+                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 4.r,
-                    offset: const Offset(0, 4),
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
-              child: TextField(
-                controller: searchController,
-                onChanged: filterProviders,
-                decoration: InputDecoration(
-                  contentPadding: EdgeInsets.symmetric(vertical: 15.h),
-                  border: InputBorder.none,
-                  hintText: 'Search...',
-                  hintStyle: TextStyle(
-                    color: Colors.grey,
-                    fontFamily: 'Urbanist',
-                    fontSize: 14.sp,
-                  ),
-                  prefixIcon: const Icon(
-                    Icons.search,
-                    color: Colors.grey,
-                  ),
-                  suffixIcon: GestureDetector(
-                    onTap: showFilterOptions, // Show animated filter options
-                    child: const Icon(
-                      Icons.filter_list,
-                      color: Colors.grey,
+              child: IconButton(
+                icon: Icon(Icons.arrow_back_ios_rounded,
+                    color: AppColors.logocolor, size: 20.sp),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+            actions: [
+              Container(
+                margin: EdgeInsets.only(right: 16.w, top: 8.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 4.r,
+                      offset: const Offset(0, 2),
                     ),
+                  ],
+                ),
+                child: IconButton(
+                  icon: Icon(Icons.favorite_border_rounded,
+                      color: AppColors.logocolor, size: 22.sp),
+                  onPressed: () {},
+                ),
+              ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: EdgeInsets.only(bottom: 16.h),
+              centerTitle: true,
+              title: Container(
+                padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 6.h),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(20.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 6.r,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Text(
+                  category['catename'],
+                  style: TextStyle(
+                    color: AppColors.logocolor,
+                    fontFamily: 'Urbanist',
+                    fontSize: 16.sp,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                style: TextStyle(fontSize: 16.sp),
+              ),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppColors.logocolor.withOpacity(0.8),
+                      AppColors.logocolor.withOpacity(0.4),
+                    ],
+                  ),
+                ),
+                child: Stack(
+                  children: [
+                    Positioned(
+                      right: -30.w,
+                      top: -30.h,
+                      child: Container(
+                        width: 150.w,
+                        height: 150.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Positioned(
+                      left: -20.w,
+                      bottom: -20.h,
+                      child: Container(
+                        width: 100.w,
+                        height: 100.h,
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Container(
+                          //   padding: EdgeInsets.all(16.r),
+                          //   decoration: BoxDecoration(
+                          //     color: Colors.white.withOpacity(0.2),
+                          //     shape: BoxShape.circle,
+                          //   ),
+                          //   child: Image.asset(
+                          //     category['imageURL'],
+                          //     height: 60.h,
+                          //     width: 60.w,
+                          //     color: Colors.white,
+                          //   ),
+                          // ),
+                          SizedBox(height: 16.h),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.location_on, color: Colors.white, size: 16.sp),
+                              SizedBox(width: 5.w),
+                              Text(
+                                "Lahore, Pakistan",
+                                style: TextStyle(
+                                  color: Colors.white,
+                                  fontFamily: 'Urbanist',
+                                  fontSize: 14.sp,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-          Positioned(
-            top: 280.h,
-            left: 10.w,
-            right: 10.w,
-            child: SizedBox(
-              height: 600.h,
-              child: filteredProviders.isEmpty
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.sentiment_dissatisfied,
-                            size: 50.sp, color: Colors.grey),
-                        SizedBox(height: 10.h),
-                        Text(
-                          "No providers found.",
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontFamily: 'Urbanist',
-                            fontSize: 16.sp,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    )
-                  : ListView.builder(
-                      itemCount: filteredProviders.length,
-                      itemBuilder: (context, index) {
-                        final provider = filteredProviders[index];
-                        return GestureDetector(
-                          onTapDown: (_) {
-                            setState(() {
-                              _scaleFactor = 0.95; // Scale down on tap
-                            });
-                          },
-                          onTapUp: (_) {
-                            setState(() {
-                              _scaleFactor = 1.0; // Scale back up on release
-                            });
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) =>
-                                    ProviderDetailsScreen(provider: provider),
-                              ),
-                            );
-                          },
-                          onTapCancel: () {
-                            setState(() {
-                              _scaleFactor = 1.0;
-                            });
-                          },
-                          child: Transform.scale(
-                            scale: _scaleFactor,
-                            child: Padding(
-                              padding: const EdgeInsets.all(8.0),
-                              child: ReusableBoxDecoration(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                          MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        Text(
-                                          provider.fullName,
-                                          style: reusableTextStyle(
-                                            fontSize: 16.sp,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        Text(
-                                          '\$${provider.pricePerHour}',
-                                          style: reusableTextStyle(
-                                            fontSize: 14.sp,
-                                            color: AppColors.logocolor,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    const Divider(),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          height: 80.h,
-                                          width: 100.w,
-                                          decoration: BoxDecoration(
-                                            boxShadow: [
-                                              BoxShadow(
-                                                color: Colors.black12,
-                                                blurRadius: 4.r,
-                                                offset: const Offset(0, 4),
-                                              ),
-                                            ],
-                                            borderRadius:
-                                                BorderRadius.circular(20),
-                                          ),
-                                          child: ClipRRect(
-                                            borderRadius:
-                                                BorderRadius.circular(16),
-                                            child: Image.asset(
-                                              provider.imageUrl,
-                                              fit: BoxFit.cover,
-                                              // loadingBuilder:
-                                              //     (BuildContext context,
-                                              //         Widget child,
-                                              //         ImageChunkEvent?
-                                              //             loadingProgress) {
-                                              //   if (loadingProgress == null)
-                                              //     return child; // If loading is done, return the child (image).
-                                              //   return Center(
-                                              //     child:
-                                              //         CircularProgressIndicator(
-                                              //       value: loadingProgress
-                                              //                   .expectedTotalBytes !=
-                                              //               null
-                                              //           ? loadingProgress
-                                              //                   .cumulativeBytesLoaded /
-                                              //               (loadingProgress
-                                              //                       .expectedTotalBytes ??
-                                              //                   1)
-                                              //           : null,
-                                              //     ),
-                                              //   );
-                                              // },
-                                              errorBuilder:
-                                                  (BuildContext context,
-                                                      Object error,
-                                                      StackTrace? stackTrace) {
-                                                return Center(
-                                                  child: Icon(
-                                                    Icons
-                                                        .error_outline, // Sorry icon
-                                                    color: Colors
-                                                        .red, // Change color to fit your design
-                                                    size: 40
-                                                        .sp, // Adjust the size as needed
-                                                  ),
-                                                );
-                                              },
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 10.w),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                provider.description,
-                                                textAlign: TextAlign.center,
-                                                style: reusableTextStyle(
-                                                  fontSize: 14.sp,
-                                                  color: AppColors.logocolor,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                              ),
-                                              Text(
-                                                provider.experienceDescription,
-                                                maxLines: 4,
-                                                overflow: TextOverflow.ellipsis,
-                                                style: reusableTextStyle(
-                                                  fontSize: 11.sp,
-                                                  color: Colors.grey,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
+
+          // Search and filter section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(15.r),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black12,
+                      blurRadius: 8.r,
+                      offset: const Offset(0, 4),
                     ),
+                  ],
+                ),
+                child: TextField(
+                  controller: searchController,
+                  onChanged: filterProviders,
+                  decoration: InputDecoration(
+                    contentPadding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
+                    border: InputBorder.none,
+                    hintText: 'Search providers...',
+                    hintStyle: TextStyle(
+                      color: Colors.grey,
+                      fontFamily: 'Urbanist',
+                      fontSize: 14.sp,
+                    ),
+                    prefixIcon: Icon(Icons.search, color: Colors.grey),
+                    suffixIcon: GestureDetector(
+                      onTap: showFilterOptions,
+                      child: Container(
+                        padding: EdgeInsets.all(10.r),
+                        child: Icon(Icons.filter_list_rounded, color: Colors.grey),
+                      ),
+                    ),
+                  ),
+                  style: TextStyle(fontSize: 16.sp),
+                ),
+              ),
+            ),
+          ),
+
+          // Results count
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: 25.w),
+              child: Text(
+                "${filteredProviders.length} Providers Available",
+                style: TextStyle(
+                  fontSize: 16.sp,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                  fontFamily: 'Urbanist',
+                ),
+              ),
+            ),
+          ),
+
+          // Providers list
+          _isLoading
+              ? SliverToBoxAdapter(
+            child: Container(
+              height: 300.h,
+              child: Center(
+                child: CircularProgressIndicator(
+                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.logocolor),
+                ),
+              ),
+            ),
+          )
+              : filteredProviders.isEmpty
+              ? SliverToBoxAdapter(
+            child: Container(
+              height: 300.h,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.sentiment_dissatisfied, size: 60.sp, color: Colors.grey[400]),
+                  SizedBox(height: 15.h),
+                  Text(
+                    "No providers found",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontFamily: 'Urbanist',
+                      fontSize: 18.sp,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  SizedBox(height: 10.h),
+                  Text(
+                    "Try adjusting your search or filters",
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontFamily: 'Urbanist',
+                      fontSize: 14.sp,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
+              ),
+            ),
+          )
+              : SliverList(
+            delegate: SliverChildBuilderDelegate(
+                  (context, index) {
+                final provider = filteredProviders[index];
+                return _buildProviderCard(provider, context);
+              },
+              childCount: filteredProviders.length,
             ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildProviderCard(ProviderModel provider, BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ProviderDetailsScreen(provider: provider),
+          ),
+        );
+      },
+      child: Transform.scale(
+        scale: _scaleFactor,
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(20.r),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black12,
+                blurRadius: 8.r,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(16.r),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Provider image
+                    Container(
+                      height: 80.h,
+                      width: 80.w,
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16.r),
+                        image: DecorationImage(
+                          image: AssetImage(provider.imageUrl),
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                    ),
+                    SizedBox(width: 15.w),
+
+                    // Provider details
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                provider.fullName,
+                                style: TextStyle(
+                                  fontSize: 18.sp,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                              Text(
+                                '\$${provider.pricePerHour}/hr',
+                                style: TextStyle(
+                                  fontSize: 16.sp,
+                                  color: AppColors.logocolor,
+                                  fontWeight: FontWeight.bold,
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 5.h),
+                          Row(
+                            children: [
+                              Icon(Icons.star, color: Colors.amber, size: 16.sp),
+                              SizedBox(width: 4.w),
+                              Text(
+                                '4.5',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[700],
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                              SizedBox(width: 10.w),
+                              Icon(Icons.work, color: Colors.grey, size: 16.sp),
+                              SizedBox(width: 4.w),
+                              Text(
+                                '${provider.experience} yrs',
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.grey[700],
+                                  fontFamily: 'Urbanist',
+                                ),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8.h),
+                          Text(
+                            provider.description,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.grey[600],
+                              fontFamily: 'Urbanist',
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 12.h),
+                Divider(height: 1.h, color: Colors.grey[200]),
+                SizedBox(height: 12.h),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.location_on, size: 16.sp, color: AppColors.logocolor),
+                        SizedBox(width: 5.w),
+                        Text(
+                          provider.location,
+                          style: TextStyle(
+                            fontSize: 14.sp,
+                            color: Colors.grey[600],
+                            fontFamily: 'Urbanist',
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                      decoration: BoxDecoration(
+                        color: AppColors.logocolor.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(20.r),
+                      ),
+                      child: Text(
+                        'View Profile',
+                        style: TextStyle(
+                          fontSize: 12.sp,
+                          color: AppColors.logocolor,
+                          fontWeight: FontWeight.w600,
+                          fontFamily: 'Urbanist',
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
     );
   }
