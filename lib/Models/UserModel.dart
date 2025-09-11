@@ -5,7 +5,6 @@ class UserModel {
   final String name;
   final String email;
    final String? bio; 
-  final String phoneNumber;
   final String? imageUrl;
 
   UserModel({
@@ -13,7 +12,6 @@ class UserModel {
     required this.name,
     required this.email,
     this.bio, 
-    required this.phoneNumber,
     this.imageUrl,
   });
 
@@ -25,7 +23,6 @@ class UserModel {
       name: data['name'],
          bio: data['bio'],  
       email: data['email'],
-      phoneNumber: data['phoneNumber'],
       imageUrl: data['imageUrl'],
     );
   }

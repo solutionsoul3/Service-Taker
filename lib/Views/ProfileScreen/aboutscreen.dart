@@ -142,35 +142,21 @@ class _AboutScreenState extends State<AboutScreen> {
                           children: [
                             _buildListTile(
                                 Icons.person, "My Profile", "My Profile"),
-                            _buildListTile(
-                                Icons.book, "My Bookings", "My Bookings"),
+
                             _buildListTile(Icons.update, "Change Password",
                                 "Change Password"),
                             _buildListTile(Icons.delete, "Delete Account",
                                 "Delete Account"),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 20.h),
-                      Container(
-                        height: 260.h,
-                        width: 350.w,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(10.r),
-                        ),
-                        child: Column(
-                          children: [
-                            _buildListTile(
-                                Icons.settings, "Settings", "My Settings"),
-                            _buildListTile(
-                                Icons.language, "Language", "Language"),
-                            _buildListTile(
-                                Icons.light_mode, "Theme Mode", "theme"),
+                            // _buildListTile(
+                            //     Icons.settings, "Settings", "My Settings"),
+
+
                             _buildListTile(Icons.logout, "Log out", "logout"),
                           ],
                         ),
                       ),
+                      SizedBox(height: 20.h),
+
                     ],
                   ),
                 ),
