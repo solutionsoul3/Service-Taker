@@ -82,7 +82,7 @@ class _BookingSummaryState extends State<BookingSummary> {
         'clientId': userId,
         'clientname': userModel.name,
         'clientemail': userModel.email,
-        'clientphoneNumber': userModel.phoneNumber,
+       // 'clientphoneNumber': userModel.phoneNumber,
         'clientimageUrl': userModel.imageUrl ?? '',
         'clientLocation': widget.userLocation,
         'clienthintText': widget.hintText,

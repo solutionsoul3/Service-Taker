@@ -40,8 +40,8 @@ class _ProfileDetailsState extends State<ProfileDetails> {
       if (user != null) {
         currentUser = user;
         _nameController = TextEditingController(text: currentUser!.name);
-        _phoneController =
-            TextEditingController(text: currentUser!.phoneNumber);
+        // _phoneController =
+        //     TextEditingController(text: currentUser!.phoneNumber);
         _bioController = TextEditingController(text: currentUser!.bio ?? '');
       } else {
        
@@ -351,23 +351,23 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                         children: [
                           Icon(Icons.phone, color: Colors.grey, size: 19.sp),
                           SizedBox(width: 8.w),
-                          Expanded(
-                            child: _isEditing
-                                ? TextField(
-                                    controller: _phoneController,
-                                    decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        hintText: 'Enter your phone number'),
-                                    keyboardType: TextInputType.phone)
-                                : Text(
-                                    currentUser != null
-                                        ? currentUser!.phoneNumber
-                                        : 'Loading...',
-                                    style: TextStyle(
-                                        color: Colors.black,
-                                        fontFamily: 'Urbanist',
-                                        fontSize: 13.sp)),
-                          ),
+                          // Expanded(
+                          //   child: _isEditing
+                          //       ? TextField(
+                          //           controller: _phoneController,
+                          //           decoration: const InputDecoration(
+                          //               border: OutlineInputBorder(),
+                          //               hintText: 'Enter your phone number'),
+                          //           keyboardType: TextInputType.phone)
+                          //       : Text(
+                          //           currentUser != null
+                          //               ? currentUser!.phoneNumber
+                          //               : 'Loading...',
+                          //           style: TextStyle(
+                          //               color: Colors.black,
+                          //               fontFamily: 'Urbanist',
+                          //               fontSize: 13.sp)),
+                          // ),
                         ],
                       ),
                     ],
@@ -452,7 +452,7 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                       // Reset the form fields
                       setState(() {
                         _nameController.text = currentUser?.name ?? '';
-                        _phoneController.text = currentUser?.phoneNumber ?? '';
+                      //  _phoneController.text = currentUser?.phoneNumber ?? '';
                         _bioController.text = currentUser?.bio ?? '';
                         _selectedImage = null; // Reset selected image
                       });

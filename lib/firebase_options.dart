@@ -50,19 +50,19 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyBDkQYfY0BXQcXF3GzcDc21CV00Soe7bX8',
-    appId: '1:986045792332:android:9c6c5eda430332c97134e9',
-    messagingSenderId: '986045792332',
-    projectId: 'talktime-cf369',
-    storageBucket: 'talktime-cf369.appspot.com',
+    apiKey: 'AIzaSyDjF3NuH1vjPhSe2D7O__aC9uBIrH7FHXg',
+    appId: '1:411347189246:android:938a6c2db8d2b1fc17d4af',
+    messagingSenderId: '411347189246',
+    projectId: 'g-plug-home-services',
+    storageBucket: 'g-plug-home-services.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDwvohVYqEVB3_YrC8VIK6SiG1FMjpC3QI',
-    appId: '1:986045792332:ios:da87ae83638a03767134e9',
-    messagingSenderId: '986045792332',
-    projectId: 'talktime-cf369',
-    storageBucket: 'talktime-cf369.appspot.com',
-    iosBundleId: 'com.talkTime',
+    apiKey: 'AIzaSyA8_NCvwc2jbQvtmV2vdOG2Naadge0tblQ',
+    appId: '1:411347189246:ios:7f36d8ddbbc89b8e17d4af',
+    messagingSenderId: '411347189246',
+    projectId: 'g-plug-home-services',
+    storageBucket: 'g-plug-home-services.firebasestorage.app',
+    iosBundleId: 'com.example.talk',
   );
 }

@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "411347189246",
+    "project_id": "g-plug-home-services",
+    "storage_bucket": "g-plug-home-services.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:411347189246:android:91d18524251e518617d4af",
+        "android_client_info": {
+          "package_name": "com.example.servicetakerprovider"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjF3NuH1vjPhSe2D7O__aC9uBIrH7FHXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:411347189246:android:938a6c2db8d2b1fc17d4af",
+        "android_client_info": {
+          "package_name": "com.example.talk"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDjF3NuH1vjPhSe2D7O__aC9uBIrH7FHXg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

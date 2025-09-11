@@ -8,6 +8,8 @@ import 'package:talk/Views/ProfileScreen/aboutscreen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 
+import '../CallScreen/call-screen.dart';
+import '../ChatScreens/chat-screen.dart';
 import '../Explore_Screen/explore-screen.dart';
 
 class BottomNavBar extends StatefulWidget {
@@ -24,9 +26,9 @@ class _BottomNavBarState extends State<BottomNavBar> {
   static final List<Widget> _pages = <Widget>[
     const HomeScreen(),
     const ExploreScreen(),
-    const FavScreen(),
-    WhatsAppStyleScreen(),
-    // const MyBookingScreen(),
+
+    ChatScreen(),
+    const CallScreen(),
     const AboutScreen(),
   ];
 
@@ -48,10 +50,10 @@ class _BottomNavBarState extends State<BottomNavBar> {
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.1), // Shadow color
+              color: Colors.black.withOpacity(0.1),
               spreadRadius: 5,
               blurRadius: 10,
-              offset: const Offset(0, -2), // Adjust position of the shadow
+              offset: const Offset(0, -2),
             ),
           ],
         ),
@@ -66,69 +68,64 @@ class _BottomNavBarState extends State<BottomNavBar> {
             backgroundColor: Colors.white,
             selectedItemColor: AppColors.logocolor,
             unselectedItemColor: Colors.grey,
+            type: BottomNavigationBarType.fixed,
             items: <BottomNavigationBarItem>[
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
                   AppImages.homeicon,
-                  color:
-                  _selectedIndex == 0 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
+                  color: _selectedIndex == 0
+                      ? AppColors.logocolor
+                      : Colors.grey,
                 ),
                 label: 'Home',
               ),
-              // BottomNavigationBarItem(
-              //   icon: SvgPicture.asset(
-              //     AppImages.bookingicon,
-              //     color:
-              //         _selectedIndex == 1 ? AppColors.logocolor : Colors.grey,
-              //     height: 24.0,
-              //     width: 24.0,
-              //   ),
-              //   label: 'Bookings',
-              // ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
-                  AppImages.favicon,
-                  color:
-                  _selectedIndex == 2 ? AppColors.logocolor : Colors.grey,
+                  AppImages.bookingicon,
                   height: 24.0,
                   width: 24.0,
+                  color: _selectedIndex == 1
+                      ? AppColors.logocolor
+                      : Colors.grey,
                 ),
-                label: 'Favorite',
+                label: 'Explore',
               ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
                   AppImages.chaticon,
-                  color:
-                  _selectedIndex == 3 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
+                  color: _selectedIndex == 2
+                      ? AppColors.logocolor
+                      : Colors.grey,
+                ),
+                label: 'Message',
+              ),
+              BottomNavigationBarItem(
+                icon: SvgPicture.asset(
+                  AppImages.callhistoryicon,
+                  height: 24.0,
+                  width: 24.0,
+                  color: _selectedIndex == 3
+                      ? AppColors.logocolor
+                      : Colors.grey,
                 ),
                 label: 'Chats',
               ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
-                  AppImages.callhistoryicon,
-                  color:
-                  _selectedIndex == 4 ? AppColors.logocolor : Colors.grey,
-                  height: 24.0,
-                  width: 24.0,
-                ),
-                label: 'Calls',
-              ),
-              BottomNavigationBarItem(
-                icon: SvgPicture.asset(
                   AppImages.personicon,
-                  color:
-                  _selectedIndex == 5 ? AppColors.logocolor : Colors.grey,
                   height: 24.0,
                   width: 24.0,
+                  color: _selectedIndex == 4
+                      ? AppColors.logocolor
+                      : Colors.grey,
                 ),
                 label: 'Profile',
               ),
             ],
-            type: BottomNavigationBarType.fixed,
           ),
         ),
       ),
