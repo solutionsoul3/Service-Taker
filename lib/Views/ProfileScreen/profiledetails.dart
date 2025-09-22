@@ -180,20 +180,7 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                                   fontFamily: 'Urbanist',
                                   fontSize: 14.sp,
                                   fontWeight: FontWeight.bold)),
-                          CustomElevatedButton(
-                            text: 'Reset',
-                            onPressed: () {
-                              setState(() {
-                                _selectedImage = null;
-                              });
-                            },
-                            height: 30.h,
-                            width: 90.w,
-                            backgroundColor:
-                                const Color.fromARGB(255, 226, 222, 222),
-                            textColor: Colors.black,
-                            borderRadius: 20.r,
-                          ),
+
                         ],
                       ),
                       SizedBox(height: 10.h),

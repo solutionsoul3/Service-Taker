@@ -3,8 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Models/ProviderModel.dart';
-import 'package:talk/Views/BookService/bookservice.dart';
-import 'package:talk/Views/ChatScreen/chattingscreenwithuser.dart';
+import 'package:talk/Views/ChatScreens/chat-screen.dart';
 import 'package:talk/Views/ReviewScreen/review_screen.dart';
 import 'package:talk/Views/auth/HelpScreen/ImageViewerScreen.dart';
 import 'package:talk/constants/colors.dart';
@@ -549,22 +548,22 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
             SizedBox(
               height: 20.h,
             ),
-            CustomElevatedButton(
-              text: 'Book Service ',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          BookServiceScreen(provider: widget.provider)),
-                );
-              },
-              height: 40.h,
-              width: 400.w,
-              backgroundColor: AppColors.logocolor,
-              textColor: Colors.white,
-              borderRadius: 10.r,
-            ),
+            // CustomElevatedButton(
+            //   text: 'Book Service ',
+            //   onPressed: () {
+            //     Navigator.push(
+            //       context,
+            //       MaterialPageRoute(
+            //           builder: (context) =>
+            //               BookServiceScreen(provider: widget.provider)),
+            //     );
+            //   },
+            //   height: 40.h,
+            //   width: 400.w,
+            //   backgroundColor: AppColors.logocolor,
+            //   textColor: Colors.white,
+            //   borderRadius: 10.r,
+            // ),
             SizedBox(
               height: 20.h,
             ),
@@ -760,9 +759,7 @@ Widget _buildIconContainer(BuildContext context, IconData icon, String tooltip,
         Navigator.push(
           context,
           MaterialPageRoute(
-            builder: (context) => ChatWithUser(
-              provider: provider, // Pass the whole provider object
-            ),
+            builder: (context) => ChatScreen(),
           ),
         );
       },

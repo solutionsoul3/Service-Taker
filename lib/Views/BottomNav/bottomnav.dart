@@ -1,9 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:talk/Views/ChatScreen/chatscreen.dart';
-import 'package:talk/Views/FavScreen/favscreen.dart';
 import 'package:talk/Views/HomeScreen/homescreen.dart';
-import 'package:talk/Views/MyBookings/mybookings.dart';
 import 'package:talk/Views/ProfileScreen/aboutscreen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';

@@ -7,7 +7,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:talk/Views/auth/login_screen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';

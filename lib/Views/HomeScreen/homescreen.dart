@@ -26,10 +26,12 @@ class _HomeScreenState extends State<HomeScreen> {
   UserModel? currentUser;
 
   static const _carouselImages = [
-    'assets/images/homepics/slider1.jpg',
-    'assets/images/homepics/slider4.jpg',
-    'assets/images/homepics/slider2.jpg',
-    'assets/images/homepics/slider3.jpg',
+  AppImages.plumber,
+    AppImages.handman,
+    AppImages.service,
+    AppImages.construction,
+
+
   ];
 
   static const _categories = [
