@@ -1,19 +1,15 @@
-import 'package:cached_network_image/cached_network_image.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Models/UserModel.dart';
 import 'package:talk/Views/AboutUs/AboutUs.dart';
 import 'package:talk/Views/FeedBack/feedback.dart';
-import 'package:talk/Views/MyWalletScreen/wallet_screen.dart';
-import 'package:talk/Views/PackageScreen/package_screen.dart';
-import 'package:talk/Views/PackageScreen/subscription_history.dart';
 import 'package:talk/Views/PrivacyPolicy/PrivacyPolicy.dart';
 import 'package:talk/Views/auth/HelpScreen/helpscreen.dart';
 import 'package:talk/Views/auth/login_screen.dart';
-import 'package:talk/utility/user_service.dart';
 
 import '../../../../Constants/colors.dart';
+import '../../Controller/user-contoller.dart';
+import '../../constants/image.dart';
 
 class DrawerView extends StatefulWidget {
   const DrawerView({super.key});
@@ -24,6 +20,7 @@ class DrawerView extends StatefulWidget {
 
 class _DrawerViewState extends State<DrawerView> {
   UserModel? currentUser;
+  final UserController _userController = UserController();
 
   @override
   void initState() {
@@ -31,10 +28,12 @@ class _DrawerViewState extends State<DrawerView> {
     _loadUserData();
   }
 
+  /// Load current user from Firestore using UserController
   Future<void> _loadUserData() async {
-    UserService userService = UserService();
-    UserModel? user = await userService.getUserDetails();
-    setState(() => currentUser = user);
+    UserModel? user = await _userController.getCurrentUser();
+    if (mounted) {
+      setState(() => currentUser = user);
+    }
   }
 
   /// Logout confirmation dialog
@@ -47,17 +46,15 @@ class _DrawerViewState extends State<DrawerView> {
           content: const Text("Are you sure you want to logout?"),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context), // Close dialog
+              onPressed: () => Navigator.pop(context),
               child: const Text("No"),
             ),
             TextButton(
-              onPressed: () {
-                Navigator.pop(context); // Close dialog
-
-                // 👉 Add your signOut logic here if using Firebase
+              onPressed: () async {
+                Navigator.pop(context);
+                // 👉 Add FirebaseAuth signOut if needed
                 // await FirebaseAuth.instance.signOut();
 
-                // Clear navigation and go to login
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -72,6 +69,7 @@ class _DrawerViewState extends State<DrawerView> {
     );
   }
 
+  /// Drawer Header with user info
   Widget _drawerHeader() {
     return DrawerHeader(
       padding: EdgeInsets.zero,
@@ -90,26 +88,7 @@ class _DrawerViewState extends State<DrawerView> {
                   CircleAvatar(
                     radius: 40.r,
                     backgroundColor: Colors.grey[300],
-                    child: currentUser?.imageUrl?.isNotEmpty == true
-                        ? CachedNetworkImage(
-                      imageUrl: currentUser!.imageUrl!,
-                      imageBuilder: (context, imageProvider) => Container(
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          image: DecorationImage(
-                              image: imageProvider, fit: BoxFit.cover),
-                        ),
-                      ),
-                      placeholder: (context, url) =>
-                      const CircularProgressIndicator(),
-                      errorWidget: (context, url, error) =>
-                      const Icon(Icons.error),
-                    )
-                        : const CircleAvatar(
-                      radius: 40,
-                      backgroundImage: AssetImage(
-                          'assets/images/homepics/user1.jpg'),
-                    ),
+                    backgroundImage: const AssetImage(AppImages.applogo),
                   ),
                   SizedBox(height: 12.h),
                   Text(
@@ -117,7 +96,6 @@ class _DrawerViewState extends State<DrawerView> {
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 15.sp,
-                      fontFamily: 'Urbanist',
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -126,7 +104,6 @@ class _DrawerViewState extends State<DrawerView> {
                     currentUser?.email ?? 'Loading...',
                     style: TextStyle(
                       color: Colors.white,
-                      fontFamily: 'Urbanist',
                       fontSize: 13.sp,
                     ),
                   ),
@@ -139,6 +116,7 @@ class _DrawerViewState extends State<DrawerView> {
     );
   }
 
+  /// Drawer ListTile
   Widget _listTile(String title, IconData icon, {VoidCallback? onTap}) {
     return ListTile(
       title: Row(
@@ -149,7 +127,6 @@ class _DrawerViewState extends State<DrawerView> {
             title,
             style: TextStyle(
               fontSize: 15.sp,
-              fontFamily: 'Urbanist',
               fontWeight: FontWeight.bold,
               color: Colors.black,
             ),
@@ -176,7 +153,6 @@ class _DrawerViewState extends State<DrawerView> {
               'Application preferences',
               style: TextStyle(
                 fontSize: 15.sp,
-                fontFamily: 'Urbanist',
                 color: Colors.grey,
               ),
             ),
@@ -191,7 +167,14 @@ class _DrawerViewState extends State<DrawerView> {
           _listTile('About Us', Icons.info,
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AboutScreenUs()))),
-          /// Logout with confirmation dialog
+          _listTile('Help', Icons.help,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const HelpScreen()))),
+          _listTile('Settings', Icons.settings,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const HelpScreen()))),
+
+          /// Logout
           _listTile('Logout', Icons.logout, onTap: _logout),
         ],
       ),
