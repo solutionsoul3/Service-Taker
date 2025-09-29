@@ -2,15 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:lottie/lottie.dart';
 import 'package:talk/Models/ProviderModel.dart';
-import 'package:talk/Views/BookService/bookservice.dart';
-import 'package:talk/Views/ChatScreen/chatscreen.dart';
 import 'package:talk/Views/ChatScreen/chattingscreenwithuser.dart';
-import 'package:talk/Views/ReviewScreen/review_screen.dart';
-import 'package:talk/Views/auth/HelpScreen/ImageViewerScreen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
-import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/widgets/reusableboxdecoration.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -44,6 +40,8 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   List<String> imageUrls = [];
   bool _isLoading = true;
   String? _error;
+  int selectedRating = 0; // for new selection
+  int userRating = 0;
 
   @override
   void initState() {
@@ -52,6 +50,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     _checkIfFavorited();
     _fetchReviewCount();
     _fetchImages();
+    _fetchUserRating();
   }
 
   Future<void> _fetchImages() async {
@@ -83,6 +82,29 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     }
   }
 
+  Future<void> _fetchUserRating() async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+
+      var snapshot = await FirebaseFirestore.instance
+          .collection('Provider')
+          .doc(widget.provider.id)
+          .collection('Reviews')
+          .where('userId', isEqualTo: userId)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        setState(() {
+          userRating = snapshot.docs.first['rating']; // 👈 existing rating
+          selectedRating = userRating; // show it in stars
+        });
+      }
+    } catch (e) {
+      print("Error fetching user rating: $e");
+    }
+  }
+
   Future<void> _fetchReviewCount() async {
     try {
       // Reference to the Reviews collection of the specific provider
@@ -101,44 +123,106 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     }
   }
 
-  Widget _buildStarRating(int count) {
-    double rating;
 
-    if (count > 10) {
-      rating = 4.0; // 4 stars
-    } else if (count >= 5) {
-      rating = 3.5; // 3.5 stars
-    } else if (count >= 3) {
-      rating = 3.0; // 3 stars
-    } else {
-      rating = 0.0; // No stars
-    }
 
+  Widget _buildStarRating() {
     List<Widget> stars = [];
 
-    for (int i = 0; i < 5; i++) {
-      if (i < rating) {
-        stars.add(
-          Icon(
-            Icons.star,
+    for (int i = 1; i <= 5; i++) {
+      stars.add(
+        GestureDetector(
+          onTap: () async {
+            setState(() {
+              selectedRating = i;
+            });
+
+            final userId = FirebaseAuth.instance.currentUser?.uid;
+
+            // ✅ Check if user already rated → update instead of adding new doc
+            var snapshot = await FirebaseFirestore.instance
+                .collection('Provider')
+                .doc(widget.provider.id)
+                .collection('Reviews')
+                .where('userId', isEqualTo: userId)
+                .limit(1)
+                .get();
+
+            if (snapshot.docs.isNotEmpty) {
+              // update existing
+              await snapshot.docs.first.reference.update({
+                "rating": i,
+                "createdAt": FieldValue.serverTimestamp(),
+              });
+            } else {
+              // add new
+              await FirebaseFirestore.instance
+                  .collection('Provider')
+                  .doc(widget.provider.id)
+                  .collection('Reviews')
+                  .add({
+                "rating": i,
+                "createdAt": FieldValue.serverTimestamp(),
+                "userId": userId,
+              });
+            }
+
+            _showThankYouPopup(widget.provider.fullName);
+          },
+          child: Icon(
+            i <= selectedRating ? Icons.star : Icons.star_border,
             color: Colors.amber,
-            size: 20.h, // Adjust size as needed
+            size: 24.h,
           ),
-        );
-      } else {
-        stars.add(
-          Icon(
-            Icons.star_border,
-            color: Colors.amber,
-            size: 20.h, // Adjust size as needed
-          ),
-        );
-      }
+        ),
+      );
     }
 
-    return Row(
-      children: stars,
+    return Row(children: stars);
+  }
+
+
+
+  void _showThankYouPopup(String providerName) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // 🎉 Lottie Animation (download JSON from lottiefiles.com)
+                Lottie.asset(
+                  'assets/images/thankyou.gif',
+                  width: 120,
+                  height: 120,
+                  repeat: false,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  "Thank you!",
+                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 5),
+                Text(
+                  "You reviewed $providerName",
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
     );
+
+    // Auto close after 2 seconds
+    Future.delayed(const Duration(seconds: 2), () {
+      if (Navigator.canPop(context)) Navigator.pop(context);
+    });
   }
 
   String _getRatingValue(int reviewCount) {
@@ -586,17 +670,10 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildStarRating(reviewCount),
+                  _buildStarRating(),
                   const Spacer(),
                   GestureDetector(
                     onTap: () {
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (context) =>
-                      //         CommentScreen(providerId: widget.provider.id),
-                      //   ),
-                      // );
                     },
                     child: Text(
                       'Reviews($reviewCount)',
