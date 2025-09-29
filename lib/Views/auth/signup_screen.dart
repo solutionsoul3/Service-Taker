@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:talk/Views/auth/login_screen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
@@ -138,29 +136,6 @@ class _SignupScreenState extends State<SignupScreen> {
                                 keyboardType: TextInputType.emailAddress,
                                 controller: _emailController,
                               ),
-                              // SizedBox(height: 10.h),
-                              // Text(
-                              //   "Phone Number",
-                              //   style: TextStyle(
-                              //     color: Colors.black,
-                              //     fontSize: 15.sp,
-                              //     fontFamily: 'Urbanist',
-                              //   ),
-                              // ),
-                              // IntlPhoneField(
-                              //   decoration: InputDecoration(
-                              //       labelText: 'enter phone no.',
-                              //       labelStyle: TextStyle(
-                              //           fontFamily: 'Urbanist',
-                              //           fontSize: 13.sp,
-                              //           color: Colors.grey),
-                              //       border: InputBorder.none,
-                              //       hintStyle: TextStyle(fontSize: 13.sp)),
-                              //   initialCountryCode: 'US',
-                              //   onChanged: (phone) {
-                              //     _phoneNumber = phone.completeNumber;
-                              //   },
-                              // ),
                               SizedBox(height: 10.h),
                               TextFieldWithIcon(
                                 labelText: "Password",

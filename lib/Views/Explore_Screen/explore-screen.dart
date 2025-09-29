@@ -268,12 +268,20 @@ class _ExploreScreenState extends State<ExploreScreen> {
   Widget _buildCategoryCard(
       Map<String, String> category, BuildContext context) {
     return GestureDetector(
-      onTap: () => Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (context) => ExploreCategory(category: category),
-        ),
-      ),
+      // Inside _buildCategoryCard
+      onTap: () {
+        final catename = category['catename']!;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ExploreCategory(
+              category: category,
+              categoryName: catename, // ✅ pass the service name
+            ),
+          ),
+        );
+      },
+
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,

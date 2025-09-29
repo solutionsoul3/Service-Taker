@@ -28,7 +28,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     const ExploreScreen(),
 
     ChatScreen(),
-    const CallScreen(),
+    UserCallScreen(),
     const AboutScreen(),
   ];
 
@@ -101,7 +101,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       ? AppColors.logocolor
                       : Colors.grey,
                 ),
-                label: 'Message',
+                label: 'Chat',
               ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
@@ -112,7 +112,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       ? AppColors.logocolor
                       : Colors.grey,
                 ),
-                label: 'Chats',
+                label: 'Call',
               ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(

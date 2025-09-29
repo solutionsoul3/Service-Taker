@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Models/ProviderModel.dart';
 import 'package:talk/Views/BookService/bookservice.dart';
+import 'package:talk/Views/ChatScreen/chatscreen.dart';
 import 'package:talk/Views/ChatScreen/chattingscreenwithuser.dart';
 import 'package:talk/Views/ReviewScreen/review_screen.dart';
 import 'package:talk/Views/auth/HelpScreen/ImageViewerScreen.dart';
@@ -11,6 +12,7 @@ import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/widgets/reusableboxdecoration.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProviderDetailsScreen extends StatefulWidget {
   final ProviderModel provider;
@@ -284,8 +286,8 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                           SizedBox(
                             width: 5.w,
                           ),
-                          _buildIconContainer(context, Icons.message, 'Message',
-                              widget.provider),
+                          // _buildIconContainer(context, Icons.message, 'Message',
+                          //     widget.provider),
                         ],
                       ),
                     ],
@@ -445,129 +447,11 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                 ],
               ),
             ),
+
             SizedBox(
-              height: 10.h,
+              height: 50.h,
             ),
-            ReusableBoxDecoration(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Portfolio Details',
-                        style: reusableTextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      GestureDetector(
-                        onTap: () {
-                          // Navigate to ImageViewerScreen
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => ImageViewerScreen(
-                                imageUrls: imageUrls,
-                                initialIndex:
-                                    0, // or whichever index you want to start with
-                              ),
-                            ),
-                          );
-                        },
-                        child: Text(
-                          'View All',
-                          style: reusableTextStyle(
-                            fontSize: 13.sp,
-                            fontWeight: FontWeight.bold,
-                            color: AppColors.logocolor,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  SizedBox(
-                    height: 200.h,
-                    child: _isLoading
-                        ? const Center(child: CircularProgressIndicator())
-                        : _error != null
-                            ? Center(child: Text(_error!))
-                            : ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                itemCount: imageUrls.length,
-                                itemBuilder: (context, index) {
-                                  return Padding(
-                                    padding: EdgeInsets.all(10.r),
-                                    child: Container(
-                                      width: 200.w,
-                                      decoration: BoxDecoration(
-                                        borderRadius:
-                                            BorderRadius.circular(10.r),
-                                        color: Colors.white,
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: Colors.black12,
-                                            blurRadius: 4.r,
-                                            offset: const Offset(0, 4),
-                                          ),
-                                        ],
-                                      ),
-                                      child: GestureDetector(
-                                        onTap: () => {},
-                                        child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            ClipRRect(
-                                              borderRadius:
-                                                  BorderRadius.circular(10.r),
-                                              child: Image.network(
-                                                imageUrls[index],
-                                                fit: BoxFit.cover,
-                                                height: 150.h,
-                                                width: double.infinity,
-                                              ),
-                                            ),
-                                            Image.asset(
-                                              AppImages.star,
-                                              height: 20.h,
-                                              width: 100.w,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ),
-                                  );
-                                },
-                              ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 20.h,
-            ),
-            CustomElevatedButton(
-              text: 'Book Service ',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) =>
-                          BookServiceScreen(provider: widget.provider)),
-                );
-              },
-              height: 40.h,
-              width: 400.w,
-              backgroundColor: AppColors.logocolor,
-              textColor: Colors.white,
-              borderRadius: 10.r,
-            ),
-            SizedBox(
-              height: 20.h,
-            ),
+
           ],
         ),
       ),
@@ -745,8 +629,8 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   }
 }
 
-Widget _buildIconContainer(BuildContext context, IconData icon, String tooltip,
-    ProviderModel provider) {
+Widget _buildIconContainer(
+    BuildContext context, IconData icon, String tooltip, ProviderModel provider) {
   return Container(
     width: 40.w,
     height: 40.h,
@@ -755,23 +639,81 @@ Widget _buildIconContainer(BuildContext context, IconData icon, String tooltip,
       borderRadius: BorderRadius.circular(10),
     ),
     child: IconButton(
-      onPressed: () {
-        // Navigate to chat screen
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ChatWithUser(
-              provider: provider, // Pass the whole provider object
+      onPressed: () async {
+        if (icon == Icons.mail) {
+          // ✅ Navigate to chat screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ChatWithProvider(provider: provider,),
             ),
-          ),
-        );
+          );
+        } else if (icon == Icons.call) {
+          // ✅ Fetch provider's contact number
+          final String contactNumber = provider.contactNumber.isNotEmpty
+              ? provider.contactNumber
+              : "N/A";
+
+          if (contactNumber == "N/A") {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("No contact number available")),
+            );
+            return;
+          }
+
+          final Uri callUri = Uri.parse("tel:$contactNumber");
+
+          // ✅ Save call record in Firestore before making the call
+          final currentUser = FirebaseAuth.instance.currentUser;
+          if (currentUser != null) {
+            // 🔹 Fetch User Profile from Firestore (NOT FirebaseAuth)
+            final userDoc = await FirebaseFirestore.instance
+                .collection("User")
+                .doc(currentUser.uid)
+                .get();
+
+            if (userDoc.exists) {
+              final userData = userDoc.data() ?? {};
+
+              final callerName = userData["name"] ?? "Unknown User";
+              final callerImage =
+                  userData["imageUrl"] ?? "https://via.placeholder.com/150";
+              final callerPhoneNumber = userData["phoneNumber"] ?? "Unknown";
+
+              await FirebaseFirestore.instance.collection("calls").add({
+                "callerId": currentUser.uid,
+                "callerName": callerName,
+                "callerImage": callerImage,
+                "callerPhoneNumber": callerPhoneNumber, // ✅ caller number
+
+                "receiverId": provider.id,
+                "receiverName": provider.fullName,
+                "receiverImage": provider.imageUrl,
+                "receiverContactNumber": contactNumber, // ✅ receiver number
+
+                "participants": [currentUser.uid, provider.id],
+                "timestamp": FieldValue.serverTimestamp(),
+                "type": "outgoing",
+              });
+            }
+          }
+
+          // ✅ Launch phone dialer
+          if (await canLaunchUrl(callUri)) {
+            await launchUrl(callUri, mode: LaunchMode.externalApplication);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text("Could not launch dialer")),
+            );
+          }
+        }
       },
-      icon: Icon(
-        icon,
-        color: Colors.white,
-        size: 22,
-      ),
+      icon: Icon(icon, color: Colors.white, size: 22),
       tooltip: tooltip,
-    ),
+    )
+
   );
 }
+
+
+

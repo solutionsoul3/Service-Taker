@@ -31,6 +31,8 @@ dependencies:
   geolocator: ^13.0.1
   geocoding: ^3.0.0
   flutter_sticky_widgets: ^0.0.3
+  firebase_app_check: ^0.3.2+10
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:

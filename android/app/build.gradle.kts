@@ -24,7 +24,7 @@ android {
 
     defaultConfig {
         applicationId = "com.example.talk"
-        minSdk = 23     // Firebase requirement
+        minSdk = flutter.minSdkVersion     // Firebase requirement
         targetSdk = 35  // ⬅️ keep aligned with compileSdk
         versionCode = flutter.versionCode
         versionName = flutter.versionName

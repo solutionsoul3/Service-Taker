@@ -1,14 +1,16 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Models/UserModel.dart';
 import 'package:talk/Views/Drawer/drawerscreen.dart';
-import 'package:talk/Views/ProfileScreen/changepassword.dart';
 import 'package:talk/Views/ProfileScreen/deleteaccount.dart';
 import 'package:talk/Views/ProfileScreen/profiledetails.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/utility/user_service.dart';
 import 'package:talk/widgets/textfields.dart';
+
+import '../auth/login_screen.dart'; // ✅ Import LoginScreen
 
 class AboutScreen extends StatefulWidget {
   const AboutScreen({super.key});
@@ -19,6 +21,21 @@ class AboutScreen extends StatefulWidget {
 
 class _AboutScreenState extends State<AboutScreen> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  UserModel? currentUser;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    UserService userService = UserService();
+    UserModel? user = await userService.getUserDetails();
+    setState(() {
+      currentUser = user;
+    });
+  }
 
   void _onTileTap(String actionTitle) {
     switch (actionTitle) {
@@ -28,44 +45,14 @@ class _AboutScreenState extends State<AboutScreen> {
           MaterialPageRoute(builder: (context) => const ProfileDetails()),
         );
         break;
-      case 'My Bookings':
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => const SecondRoute()),
-        // );
-        break;
-      case 'Change Password':
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const ChangePassword()),
-        );
-        break;
       case 'Delete Account':
         Navigator.push(
           context,
           MaterialPageRoute(builder: (context) => const DeleteAccount()),
         );
         break;
-      case 'My Settings':
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => const SecondRoute()),
-        // );
-        break;
-      case 'Language':
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => const SecondRoute()),
-        // );
-        break;
-      case 'theme':
-        // Navigator.push(
-        //   context,
-        //   MaterialPageRoute(builder: (context) => const SecondRoute()),
-        // );
-        break;
       case 'logout':
-        _logout(); // Call a logout function or handle logout logic
+        _logout(); // ✅ fixed
         break;
       default:
         print('$actionTitle tapped');
@@ -73,8 +60,44 @@ class _AboutScreenState extends State<AboutScreen> {
   }
 
   void _logout() {
-    // Implement your logout logic here
-    print('User logged out');
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Logout"),
+        content: const Text("Are you sure you want to logout?"),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), // ❌ Cancel
+            child: const Text("No"),
+          ),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context); // Close dialog first
+              await FirebaseAuth.instance.signOut(); // ✅ Sign out user
+
+              if (mounted) {
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                      (route) => false,
+                );
+
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Logged out successfully"),
+                    backgroundColor: Colors.green,
+                  ),
+                );
+              }
+            },
+            child: const Text(
+              "Yes",
+              style: TextStyle(color: Colors.red),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildListTile(IconData icon, String title, String actionTitle) {
@@ -98,22 +121,6 @@ class _AboutScreenState extends State<AboutScreen> {
     );
   }
 
-  UserModel? currentUser;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadUserData();
-  }
-
-  Future<void> _loadUserData() async {
-    UserService userService = UserService();
-    UserModel? user = await userService.getUserDetails();
-    setState(() {
-      currentUser = user;
-    });
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,7 +139,7 @@ class _AboutScreenState extends State<AboutScreen> {
                     children: [
                       SizedBox(height: 40.h),
                       Container(
-                        height: 260.h,
+                        height: 200.h,
                         width: 350.w,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -140,23 +147,13 @@ class _AboutScreenState extends State<AboutScreen> {
                         ),
                         child: Column(
                           children: [
-                            _buildListTile(
-                                Icons.person, "My Profile", "My Profile"),
-
-                            _buildListTile(Icons.update, "Change Password",
-                                "Change Password"),
-                            _buildListTile(Icons.delete, "Delete Account",
-                                "Delete Account"),
-                            // _buildListTile(
-                            //     Icons.settings, "Settings", "My Settings"),
-
-
+                            _buildListTile(Icons.person, "My Profile", "My Profile"),
+                            _buildListTile(Icons.delete, "Delete Account", "Delete Account"),
                             _buildListTile(Icons.logout, "Log out", "logout"),
                           ],
                         ),
                       ),
                       SizedBox(height: 20.h),
-
                     ],
                   ),
                 ),
@@ -180,17 +177,12 @@ class _AboutScreenState extends State<AboutScreen> {
                 padding: EdgeInsets.only(top: 10.h),
                 child: Column(
                   children: [
-                    SizedBox(
-                      height: 20.h,
-                    ),
+                    SizedBox(height: 20.h),
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         IconButton(
-                          icon: const Icon(
-                            Icons.menu,
-                            color: Colors.white,
-                          ),
+                          icon: const Icon(Icons.menu, color: Colors.white),
                           onPressed: () {
                             _scaffoldKey.currentState?.openDrawer();
                           },
@@ -205,13 +197,8 @@ class _AboutScreenState extends State<AboutScreen> {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(
-                            Icons.notifications_active,
-                            color: Colors.white,
-                          ),
-                          onPressed: () {
-                            // Implement bell action here
-                          },
+                          icon: const Icon(Icons.notifications_active, color: Colors.white),
+                          onPressed: () {},
                         ),
                       ],
                     ),
@@ -245,16 +232,21 @@ class _AboutScreenState extends State<AboutScreen> {
                 decoration: BoxDecoration(
                   color: AppColors.logocolor,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: AppColors.logocolor,
-                    width: 4,
-                  ),
+                  border: Border.all(color: AppColors.logocolor, width: 4),
                 ),
                 child: ClipRRect(
                   borderRadius: BorderRadius.circular(16),
-                  child: Image.asset(
-                    AppImages.applogo,
+                  child: currentUser == null
+                      ? const Center(child: CircularProgressIndicator())
+                      : Image.network(
+                    currentUser!.imageUrl ?? "",
                     fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Image.asset(
+                        AppImages.applogo,
+                        fit: BoxFit.cover,
+                      );
+                    },
                   ),
                 ),
               ),

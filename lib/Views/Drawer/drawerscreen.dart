@@ -191,13 +191,6 @@ class _DrawerViewState extends State<DrawerView> {
           _listTile('About Us', Icons.info,
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const AboutScreenUs()))),
-          _listTile('Help', Icons.help,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const HelpScreen()))),
-          _listTile('Settings', Icons.settings,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const HelpScreen()))),
-
           /// Logout with confirmation dialog
           _listTile('Logout', Icons.logout, onTap: _logout),
         ],

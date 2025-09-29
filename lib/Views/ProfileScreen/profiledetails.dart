@@ -40,8 +40,8 @@ class _ProfileDetailsState extends State<ProfileDetails> {
       if (user != null) {
         currentUser = user;
         _nameController = TextEditingController(text: currentUser!.name);
-        // _phoneController =
-        //     TextEditingController(text: currentUser!.phoneNumber);
+        _phoneController =
+            TextEditingController(text: currentUser!.phoneNumber);
         _bioController = TextEditingController(text: currentUser!.bio ?? '');
       } else {
        
@@ -60,33 +60,65 @@ class _ProfileDetailsState extends State<ProfileDetails> {
   }
 
   Future<void> _updateUserData() async {
-    // Reference to Firestore and Storage
+    if (currentUser == null) return;
+
     final userDocRef =
-        FirebaseFirestore.instance.collection('users').doc(currentUser!.uid);
+    FirebaseFirestore.instance.collection('User').doc(currentUser!.uid);
+
     String? imageUrl;
 
-    // Upload new image to Firebase Storage if a new image is selected
+    // ✅ Upload new image if user selected one
     if (_selectedImage != null) {
       final storageRef = FirebaseStorage.instance
           .ref()
-          .child('user_images/${currentUser!.uid}');
+          .child('user_images/${currentUser!.uid}.jpg');
       await storageRef.putFile(_selectedImage!);
       imageUrl = await storageRef.getDownloadURL();
     }
 
-    // Update user document
-    await userDocRef.set(
-        {
-          'name': _nameController.text,
-          'phoneNumber': _phoneController.text,
-          'bio': _bioController.text,
-          'imageUrl': imageUrl ??
-              currentUser!.imageUrl, // Keep existing if no new image
-        },
-        SetOptions(
-            merge:
-                true)); // Merge to update existing fields and create new ones
+    // ✅ Update Firestore document
+    await userDocRef.set({
+      'name': _nameController.text.trim(),
+      'phoneNumber': _phoneController.text.trim(),
+      'bio': _bioController.text.trim(),
+      'imageUrl': imageUrl ?? currentUser!.imageUrl,
+      'email': currentUser!.email,
+      'updatedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+
+    // ✅ Update local model so UI reflects changes without reload
+    setState(() {
+      currentUser = UserModel(
+        uid: currentUser!.uid,
+        name: _nameController.text.trim(),
+        email: currentUser!.email,
+        phoneNumber: _phoneController.text.trim(),
+        bio: _bioController.text.trim(),
+        imageUrl: imageUrl ?? currentUser!.imageUrl,
+      );
+    });
+
+    // ✅ Show dialog instead of SnackBar
+    if (mounted) {
+      showDialog(
+        context: context,
+        builder: (ctx) => AlertDialog(
+          title: const Text("Success"),
+          content: const Text("Your profile has been saved successfully!"),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(ctx).pop();
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        ),
+      );
+    }
   }
+
+
 
   @override
   Widget build(BuildContext context) {
@@ -339,38 +371,53 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Phone Number',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontFamily: 'Urbanist',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.bold)),
+                      Text(
+                        'Phone Number',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontFamily: 'Urbanist',
+                          fontSize: 14.sp,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       SizedBox(height: 10.h),
                       Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+                        crossAxisAlignment: CrossAxisAlignment.center, // ✅ align with icon
                         children: [
                           Icon(Icons.phone, color: Colors.grey, size: 19.sp),
                           SizedBox(width: 8.w),
-                          // Expanded(
-                          //   child: _isEditing
-                          //       ? TextField(
-                          //           controller: _phoneController,
-                          //           decoration: const InputDecoration(
-                          //               border: OutlineInputBorder(),
-                          //               hintText: 'Enter your phone number'),
-                          //           keyboardType: TextInputType.phone)
-                          //       : Text(
-                          //           currentUser != null
-                          //               ? currentUser!.phoneNumber
-                          //               : 'Loading...',
-                          //           style: TextStyle(
-                          //               color: Colors.black,
-                          //               fontFamily: 'Urbanist',
-                          //               fontSize: 13.sp)),
-                          // ),
+                          Expanded(
+                            child: _isEditing
+                                ? TextField(
+                              controller: _phoneController,
+                              style: TextStyle( // ✅ text style inside field
+                                fontFamily: 'Urbanist',
+                                fontSize: 13.sp,
+                                color: Colors.black,
+                              ),
+                              decoration: InputDecoration(
+                                contentPadding: EdgeInsets.symmetric(
+                                    vertical: 10.h, horizontal: 12.w), // ✅ neat padding
+                                border: OutlineInputBorder(
+                                  borderRadius: BorderRadius.circular(8.r),
+                                ),
+                                hintText: 'Enter your phone number',
+                              ),
+                              keyboardType: TextInputType.phone,
+                            )
+                                : Text(
+                              currentUser?.phoneNumber ?? 'Loading...',
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontFamily: 'Urbanist',
+                                fontSize: 13.sp,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ],
+
                   ),
                 ),
               ),

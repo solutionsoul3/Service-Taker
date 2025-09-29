@@ -128,7 +128,7 @@ class _Header extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 220.h,
+      height: 230.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30.r)),
         gradient: const LinearGradient(

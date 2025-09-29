@@ -1,126 +1,130 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-
+import 'package:intl/intl.dart'; // ✅ for date formatting
 import '../../Constants/colors.dart';
 
-class CallScreen extends StatefulWidget {
-  const CallScreen({super.key});
-
-  @override
-  State<CallScreen> createState() => _CallScreenState();
-}
-
-class _CallScreenState extends State<CallScreen> {
-  // Dummy call logs
-  List<Map<String, dynamic>> callLogs = [
-    {"name": "Adam Kain", "time": "35 minutes ago", "incoming": true, "count": 2},
-    {"name": "Roberto & Thais", "time": "Today, 9:16", "incoming": true, "count": 1},
-    {"name": "Sujay Nassar", "time": "Yesterday, 16:00", "incoming": false, "count": 2},
-    {"name": "Adele Benton", "time": "9 December, 12:51", "incoming": true, "count": 1},
-    {"name": "Scott Brown", "time": "7 December, 11:01", "incoming": false, "count": 1},
-    {"name": "Scarlett Coupe", "time": "7 December, 10:27", "incoming": true, "count": 1},
-  ];
+class UserCallScreen extends StatelessWidget {
+  const UserCallScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+
     return Scaffold(
       appBar: AppBar(
+        backgroundColor: AppColors.logocolor,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios,
+            color: Colors.white,
+            size: 24,
+          ),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
         title: const Text(
           "Calls",
           style: TextStyle(
             color: Colors.white,
-            fontSize: 28,
+            fontSize: 22,
             fontWeight: FontWeight.bold,
           ),
         ),
-        backgroundColor: AppColors.logocolor,
-        actions: const [
-          Icon(Icons.search,color: Colors.white,),
-          SizedBox(width: 16),
-          Icon(Icons.more_vert,color: Colors.white,),
-          SizedBox(width: 8),
-        ],
-      ),
-      body: Column(
-        children: [
-          // "Create call link" option
-          ListTile(
-            leading: CircleAvatar(
-              backgroundColor: AppColors.logocolor,
-              child: const Icon(Icons.link, color: Colors.white),
-            ),
-            title: const Text("Create call link"),
-            subtitle: const Text("Share a link for your WhatsApp call"),
-          ),
-
-          // Recent calls list with swipe to delete
-          Expanded(
-            child: ListView.builder(
-              itemCount: callLogs.length,
-              itemBuilder: (context, index) {
-                final call = callLogs[index];
-                return Dismissible(
-                  key: Key(call["name"] + call["time"]),
-                  direction: DismissDirection.endToStart,
-                  onDismissed: (direction) {
-                    setState(() {
-                      callLogs.removeAt(index);
-                    });
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("${call["name"]} deleted")),
-                    );
-                  },
-                  background: Container(
-                    color: Colors.red,
-                    alignment: Alignment.centerRight,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: const Icon(Icons.delete, color: Colors.white),
-                  ),
-                  child: CallTile(
-                    name: call["name"],
-                    time: call["time"],
-                    isIncoming: call["incoming"],
-                    callCount: call["count"],
-                  ),
-                );
-              },
-            ),
-          ),
-        ],
       ),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: AppColors.logocolor,
-        onPressed: () {
-          // Add new call logic
+
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection("calls")
+            .where("participants", arrayContains: currentUserId) // ✅ show only user's calls
+            .orderBy("timestamp", descending: true)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Center(child: Text("No call history"));
+          }
+
+          var callLogs = snapshot.data!.docs;
+
+          if (callLogs.isEmpty) {
+            return const Center(child: Text("No call history"));
+          }
+
+          return ListView.builder(
+            itemCount: callLogs.length,
+            itemBuilder: (context, index) {
+              var call = callLogs[index].data() as Map<String, dynamic>;
+
+              bool isCaller = call["callerId"] == currentUserId;
+              String otherUserName =
+              isCaller ? call["receiverName"] ?? "Unknown" : call["callerName"] ?? "Unknown";
+              String otherUserImage =
+              isCaller ? (call["receiverImage"] ?? "") : (call["callerImage"] ?? "");
+              bool isIncoming = !isCaller;
+
+              // ✅ Format timestamp
+              String formattedTime = "";
+              if (call["timestamp"] != null) {
+                DateTime date = (call["timestamp"] as Timestamp).toDate();
+                formattedTime = DateFormat("MMM d, h:mm a").format(date);
+              }
+
+              return Dismissible(
+                key: Key(callLogs[index].id),
+                direction: DismissDirection.endToStart,
+                onDismissed: (_) async {
+                  await FirebaseFirestore.instance
+                      .collection("calls")
+                      .doc(callLogs[index].id)
+                      .delete();
+                },
+                background: Container(
+                  color: Colors.red,
+                  alignment: Alignment.centerRight,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: const Icon(Icons.delete, color: Colors.white),
+                ),
+                child: CallTile(
+                  name: otherUserName,
+                  imageUrl: otherUserImage,
+                  time: formattedTime,
+                  isIncoming: isIncoming,
+                ),
+              );
+            },
+          );
         },
-        child: const Icon(Icons.add_call),
       ),
+
     );
   }
 }
 
 class CallTile extends StatelessWidget {
   final String name;
+  final String imageUrl;
   final String time;
   final bool isIncoming;
-  final int callCount;
 
   const CallTile({
     super.key,
     required this.name,
+    required this.imageUrl,
     required this.time,
     required this.isIncoming,
-    this.callCount = 1,
   });
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      // Removed avatar for a modern clean look
-      title: Text(
-        name,
-        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 16),
+      leading: CircleAvatar(
+        backgroundImage: imageUrl.isNotEmpty
+            ? NetworkImage(imageUrl)
+            : const AssetImage("assets/images/default_avatar.png") as ImageProvider,
       ),
+      title: Text(name, style: const TextStyle(fontWeight: FontWeight.w500)),
       subtitle: Row(
         children: [
           Icon(
@@ -130,15 +134,12 @@ class CallTile extends StatelessWidget {
           ),
           const SizedBox(width: 6),
           Text(
-            callCount > 1 ? "($callCount) $time" : time,
+            time,
             style: const TextStyle(color: Colors.black54, fontSize: 13),
           ),
         ],
       ),
-      trailing: Icon(
-        Icons.call, // Always audio call
-        color: AppColors.logocolor,
-      ),
+      trailing: Icon(Icons.call, color: AppColors.logocolor),
     );
   }
 }

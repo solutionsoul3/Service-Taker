@@ -1,19 +1,19 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:talk/Models/ProviderModel.dart';
-import 'package:talk/Views/ProviderDetails/providerdetails.dart';
-import 'package:talk/constants/colors.dart';
-import 'package:talk/constants/image.dart';
-import 'package:talk/widgets/reusableboxdecoration.dart';
-import 'package:talk/widgets/textfields.dart';
+import 'package:get/get.dart';
+import '../../Constants/colors.dart';
+import '../../Controller/provider-controller.dart';
+import '../../Models/ProviderModel.dart';
+import '../ProviderDetails/providerdetails.dart';
 
 class ExploreCategory extends StatefulWidget {
-  final dynamic category;
+  final dynamic category; // full category object
+  final String categoryName; // just the name like "Plumber"
 
   const ExploreCategory({
     super.key,
     required this.category,
+    required this.categoryName,
   });
 
   @override
@@ -22,97 +22,50 @@ class ExploreCategory extends StatefulWidget {
 
 class _ExploreCategoryState extends State<ExploreCategory>
     with SingleTickerProviderStateMixin {
-  List<ProviderModel> providers = [];
+  final ProviderController controller = Get.put(ProviderController());
+
   List<ProviderModel> filteredProviders = [];
   TextEditingController searchController = TextEditingController();
   String selectedSortOption = '';
   double _scaleFactor = 1.0;
-  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadProviders();
-  }
-
-  Future<void> _loadProviders() async {
-    setState(() {
-      _isLoading = true;
-    });
-
-    // Static list of providers
-    await Future.delayed(const Duration(milliseconds: 800)); // Simulate loading
-
-    setState(() {
-      providers = [
-        ProviderModel(
-          id: '1',
-          fullName: 'Ali Khan',
-          email: 'ali@example.com',
-          contactNumber: '03001234567',
-          formFilled: true,
-          location: 'Lahore',
-          service: 'Electrician',
-          status: 'active',
-          pricePerHour: 1500,
-          experience: '5',
-          description: 'Expert electrician for all types of wiring and repair.',
-          experienceDescription: '5 years of residential and commercial work.',
-          imageUrl: AppImages.person1,
-        ),
-        ProviderModel(
-          id: '2',
-          fullName: ' Ahmed',
-          email: 'sara@example.com',
-          contactNumber: '03007654321',
-          formFilled: true,
-          location: 'Karachi',
-          service: 'Plumber',
-          status: 'active',
-          pricePerHour: 1200,
-          experience: '3',
-          description: 'Professional plumber available 24/7.',
-          experienceDescription: 'Worked on 100+ plumbing projects.',
-          imageUrl: AppImages.person2,
-        ),
-        ProviderModel(
-          id: '3',
-          fullName: 'Usman Iqbal',
-          email: 'usman@example.com',
-          contactNumber: '03111234567',
-          formFilled: true,
-          location: 'Islamabad',
-          service: 'Painter',
-          status: 'active',
-          pricePerHour: 2000,
-          experience: '7',
-          description: 'Certified house painter & decorator.',
-          experienceDescription: '7 years of professional painting services.',
-          imageUrl: AppImages.person3,
-        ),
-      ];
-      filteredProviders = providers;
-      _isLoading = false;
-    });
+    controller
+        .fetchProvidersByCategory(widget.categoryName); // Firestore filter
   }
 
   void filterProviders(String query) {
+    final providers = controller.providers;
     if (query.isEmpty) {
-      setState(() {
-        filteredProviders = providers;
-      });
+      setState(() => filteredProviders = providers);
       return;
     }
-
     setState(() {
       filteredProviders = providers.where((provider) {
         final fullName = provider.fullName.toLowerCase();
         final description = provider.description.toLowerCase();
         final searchQuery = query.toLowerCase();
-
         return fullName.contains(searchQuery) ||
             description.contains(searchQuery);
       }).toList();
+    });
+  }
+
+  void sortProvidersByPrice({required bool ascending}) {
+    setState(() {
+      filteredProviders.sort((a, b) => ascending
+          ? a.pricePerHour.compareTo(b.pricePerHour)
+          : b.pricePerHour.compareTo(a.pricePerHour));
+    });
+  }
+
+  void sortProvidersByExperience({required bool ascending}) {
+    setState(() {
+      filteredProviders.sort((a, b) => ascending
+          ? a.experience.compareTo(b.experience)
+          : b.experience.compareTo(a.experience));
     });
   }
 
@@ -121,51 +74,31 @@ class _ExploreCategoryState extends State<ExploreCategory>
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (BuildContext context) {
+      builder: (_) {
         return Container(
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.only(
-              topLeft: Radius.circular(30.r),
-              topRight: Radius.circular(30.r),
-            ),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
           ),
-          padding: EdgeInsets.only(
-            top: 20.h,
-            left: 20.w,
-            right: 20.w,
-            bottom: MediaQuery.of(context).viewInsets.bottom + 20.h,
-          ),
+          padding: EdgeInsets.all(20.w),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Center(
-                child: Container(
-                  width: 40.w,
-                  height: 5.h,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[300],
-                    borderRadius: BorderRadius.circular(3.r),
-                  ),
-                ),
-              ),
-              SizedBox(height: 20.h),
-              Text(
-                'Sort by',
-                style: TextStyle(
-                  fontSize: 22.sp,
-                  fontWeight: FontWeight.bold,
-                  fontFamily: 'Urbanist',
-                  color: Colors.black,
-                ),
-              ),
-              SizedBox(height: 20.h),
-              _buildFilterOption('priceAsc', 'Price: Low to High', Icons.arrow_upward),
-              _buildFilterOption('priceDesc', 'Price: High to Low', Icons.arrow_downward),
-              _buildFilterOption('experienceAsc', 'Experience: Low to High', Icons.star_border),
-              _buildFilterOption('experienceDesc', 'Experience: High to Low', Icons.star),
-              SizedBox(height: 20.h),
+              Text("Sort by",
+                  style: TextStyle(
+                    fontSize: 20.sp,
+                    fontWeight: FontWeight.bold,
+                    fontFamily: "Urbanist",
+                  )),
+              SizedBox(height: 15.h),
+              _buildFilterOption(
+                  "priceAsc", "Price: Low to High", Icons.arrow_upward),
+              _buildFilterOption(
+                  "priceDesc", "Price: High to Low", Icons.arrow_downward),
+              _buildFilterOption("experienceAsc", "Experience: Low to High",
+                  Icons.star_border),
+              _buildFilterOption(
+                  "experienceDesc", "Experience: High to Low", Icons.star),
             ],
           ),
         );
@@ -174,76 +107,32 @@ class _ExploreCategoryState extends State<ExploreCategory>
   }
 
   Widget _buildFilterOption(String value, String title, IconData icon) {
-    return Padding(
-      padding: EdgeInsets.only(bottom: 10.h),
-      child: Container(
-        decoration: BoxDecoration(
-          color: selectedSortOption == value ? AppColors.logocolor.withOpacity(0.1) : Colors.grey[50],
-          borderRadius: BorderRadius.circular(12.r),
-        ),
-        child: RadioListTile<String>(
-          activeColor: AppColors.logocolor,
-          contentPadding: EdgeInsets.symmetric(horizontal: 10.w),
-          title: Row(
-            children: [
-              Icon(icon, color: AppColors.logocolor, size: 20.sp),
-              SizedBox(width: 10.w),
-              Text(
-                title,
-                style: TextStyle(
-                  color: Colors.black87,
-                  fontFamily: 'Urbanist',
-                  fontSize: 16.sp,
-                ),
-              ),
-            ],
-          ),
-          value: value,
-          groupValue: selectedSortOption,
-          onChanged: (value) {
-            setState(() {
-              selectedSortOption = value!;
-            });
-
-            if (value == 'priceAsc') {
-              sortProvidersByPrice(ascending: true);
-            } else if (value == 'priceDesc') {
-              sortProvidersByPrice(ascending: false);
-            } else if (value == 'experienceAsc') {
-              sortProvidersByExperience(ascending: true);
-            } else if (value == 'experienceDesc') {
-              sortProvidersByExperience(ascending: false);
-            }
-
-            Navigator.pop(context);
-          },
-        ),
+    return RadioListTile<String>(
+      value: value,
+      groupValue: selectedSortOption,
+      onChanged: (val) {
+        setState(() => selectedSortOption = val!);
+        if (val == "priceAsc") {
+          sortProvidersByPrice(ascending: true);
+        } else if (val == "priceDesc") {
+          sortProvidersByPrice(ascending: false);
+        } else if (val == "experienceAsc") {
+          sortProvidersByExperience(ascending: true);
+        } else {
+          sortProvidersByExperience(ascending: false);
+        }
+        Navigator.pop(context);
+      },
+      activeColor: AppColors.logocolor,
+      title: Row(
+        children: [
+          Icon(icon, color: AppColors.logocolor, size: 18.sp),
+          SizedBox(width: 8.w),
+          Text(title,
+              style: TextStyle(fontFamily: "Urbanist", fontSize: 15.sp)),
+        ],
       ),
     );
-  }
-
-  void sortProvidersByPrice({required bool ascending}) {
-    setState(() {
-      filteredProviders.sort((a, b) {
-        if (ascending) {
-          return a.pricePerHour.compareTo(b.pricePerHour);
-        } else {
-          return b.pricePerHour.compareTo(a.pricePerHour);
-        }
-      });
-    });
-  }
-
-  void sortProvidersByExperience({required bool ascending}) {
-    setState(() {
-      filteredProviders.sort((a, b) {
-        if (ascending) {
-          return a.experience.compareTo(b.experience);
-        } else {
-          return b.experience.compareTo(a.experience);
-        }
-      });
-    });
   }
 
   @override
@@ -256,7 +145,7 @@ class _ExploreCategoryState extends State<ExploreCategory>
         slivers: [
           // Modern App Bar Section
           SliverAppBar(
-            expandedHeight: 180.h,
+            expandedHeight: 250.h,
             floating: false,
             pinned: true,
             backgroundColor: Colors.white,
@@ -368,24 +257,25 @@ class _ExploreCategoryState extends State<ExploreCategory>
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Container(
-                          //   padding: EdgeInsets.all(16.r),
-                          //   decoration: BoxDecoration(
-                          //     color: Colors.white.withOpacity(0.2),
-                          //     shape: BoxShape.circle,
-                          //   ),
-                          //   child: Image.asset(
-                          //     category['imageURL'],
-                          //     height: 60.h,
-                          //     width: 60.w,
-                          //     color: Colors.white,
-                          //   ),
-                          // ),
+                          Container(
+                            padding: EdgeInsets.all(16.r),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Image.asset(
+                              category['imageURL'],
+                              height: 60.h,
+                              width: 60.w,
+                              color: Colors.white,
+                            ),
+                          ),
                           SizedBox(height: 16.h),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.location_on, color: Colors.white, size: 16.sp),
+                              Icon(Icons.location_on,
+                                  color: Colors.white, size: 16.sp),
                               SizedBox(width: 5.w),
                               Text(
                                 "Lahore, Pakistan",
@@ -406,7 +296,6 @@ class _ExploreCategoryState extends State<ExploreCategory>
               ),
             ),
           ),
-
           // Search and filter section
           SliverToBoxAdapter(
             child: Padding(
@@ -427,7 +316,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
                   controller: searchController,
                   onChanged: filterProviders,
                   decoration: InputDecoration(
-                    contentPadding: EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
+                    contentPadding:
+                        EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
                     border: InputBorder.none,
                     hintText: 'Search providers...',
                     hintStyle: TextStyle(
@@ -440,7 +330,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
                       onTap: showFilterOptions,
                       child: Container(
                         padding: EdgeInsets.all(10.r),
-                        child: Icon(Icons.filter_list_rounded, color: Colors.grey),
+                        child:
+                            Icon(Icons.filter_list_rounded, color: Colors.grey),
                       ),
                     ),
                   ),
@@ -449,76 +340,61 @@ class _ExploreCategoryState extends State<ExploreCategory>
               ),
             ),
           ),
-
-          // Results count
+          // Provider count
           SliverToBoxAdapter(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 25.w),
-              child: Text(
-                "${filteredProviders.length} Providers Available",
-                style: TextStyle(
-                  fontSize: 16.sp,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.grey[700],
-                  fontFamily: 'Urbanist',
-                ),
-              ),
-            ),
+            child: Obx(() => Padding(
+                  padding:
+                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                  child: Text(
+                    "${controller.providers.length} ${widget.categoryName} providers available",
+                    style: TextStyle(
+                      fontSize: 15.sp,
+                      fontWeight: FontWeight.w600,
+                      fontFamily: "Urbanist",
+                    ),
+                  ),
+                )),
           ),
 
-          // Providers list
-          _isLoading
-              ? SliverToBoxAdapter(
-            child: Container(
-              height: 300.h,
-              child: Center(
-                child: CircularProgressIndicator(
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.logocolor),
+          // Provider list
+          Obx(() {
+            if (controller.isLoading.value) {
+              return SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 250.h,
+                  child: Center(
+                    child: CircularProgressIndicator(
+                      valueColor: AlwaysStoppedAnimation(AppColors.logocolor),
+                    ),
+                  ),
                 ),
-              ),
-            ),
-          )
-              : filteredProviders.isEmpty
-              ? SliverToBoxAdapter(
-            child: Container(
-              height: 300.h,
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.sentiment_dissatisfied, size: 60.sp, color: Colors.grey[400]),
-                  SizedBox(height: 15.h),
-                  Text(
-                    "No providers found",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontFamily: 'Urbanist',
-                      fontSize: 18.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
+              );
+            }
+
+            if (controller.providers.isEmpty) {
+              return SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 250.h,
+                  child: Center(
+                    child: Text("No ${widget.categoryName} providers found",
+                        style:
+                            TextStyle(fontSize: 16.sp, fontFamily: "Urbanist")),
                   ),
-                  SizedBox(height: 10.h),
-                  Text(
-                    "Try adjusting your search or filters",
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontFamily: 'Urbanist',
-                      fontSize: 14.sp,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                ),
+              );
+            }
+
+            final data = filteredProviders.isEmpty
+                ? controller.providers
+                : filteredProviders;
+
+            return SliverList(
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) => _buildProviderCard(data[i], ctx),
+                childCount: data.length,
               ),
-            ),
-          )
-              : SliverList(
-            delegate: SliverChildBuilderDelegate(
-                  (context, index) {
-                final provider = filteredProviders[index];
-                return _buildProviderCard(provider, context);
-              },
-              childCount: filteredProviders.length,
-            ),
-          ),
+            );
+          }),
         ],
       ),
     );
@@ -564,13 +440,12 @@ class _ExploreCategoryState extends State<ExploreCategory>
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16.r),
                         image: DecorationImage(
-                          image: AssetImage(provider.imageUrl),
+                          image: NetworkImage(provider.imageUrl),
                           fit: BoxFit.cover,
                         ),
                       ),
                     ),
                     SizedBox(width: 15.w),
-
                     // Provider details
                     Expanded(
                       child: Column(
@@ -601,7 +476,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
                           SizedBox(height: 5.h),
                           Row(
                             children: [
-                              Icon(Icons.star, color: Colors.amber, size: 16.sp),
+                              Icon(Icons.star,
+                                  color: Colors.amber, size: 16.sp),
                               SizedBox(width: 4.w),
                               Text(
                                 '4.5',
@@ -648,7 +524,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.location_on, size: 16.sp, color: AppColors.logocolor),
+                        Icon(Icons.location_on,
+                            size: 16.sp, color: AppColors.logocolor),
                         SizedBox(width: 5.w),
                         Text(
                           provider.location,
@@ -661,7 +538,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
                       ],
                     ),
                     Container(
-                      padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
+                      padding:
+                          EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),
                       decoration: BoxDecoration(
                         color: AppColors.logocolor.withOpacity(0.1),
                         borderRadius: BorderRadius.circular(20.r),

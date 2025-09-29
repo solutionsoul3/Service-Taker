@@ -1,43 +1,47 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:get/get.dart';
 import 'package:talk/Models/ProviderModel.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/widgets/customcontainer.dart';
 
-import '../../utility/custom-intl.dart';
+import '../../Controller/chat-controller.dart';
 
-class ChatWithUser extends StatefulWidget {
+class ChatWithProvider extends StatefulWidget {
   final ProviderModel provider;
-  const ChatWithUser({
-    super.key,
-    required this.provider,
-  });
+  const ChatWithProvider({super.key, required this.provider});
 
   @override
-  _ChatWithUserState createState() => _ChatWithUserState();
+  _ChatWithProviderState createState() => _ChatWithProviderState();
 }
 
-class _ChatWithUserState extends State<ChatWithUser> {
+class _ChatWithProviderState extends State<ChatWithProvider> {
+  final ChatController chatController = Get.put(ChatController());
   final TextEditingController _messageController = TextEditingController();
-  final List<Map<String, dynamic>> _messages =
-      []; // List to hold chat messages and timestamps
+  late String currentUserId;
+  String currentUserName = "User";
+  String currentUserImage = "https://via.placeholder.com/150";
 
-  void _sendMessage() {
-    final message = _messageController.text;
-    if (message.isNotEmpty) {
-      final timestamp = DateTime.now(); // Use DateTime object for sorting
-      final formattedDate = DateFormatter.formatReadableDate(timestamp);
-      final formattedTime = DateFormatter.formatTime12h(timestamp);
+  @override
+  void initState() {
+    super.initState();
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      currentUserId = user.uid;
 
-      setState(() {
-        _messages.insert(0, {
-          'message': message,
-          'timestamp': formattedTime,
-          'date': formattedDate,
-        });
+      // Fetch Firestore fields for name and image
+      FirebaseFirestore.instance.collection("User").doc(currentUserId).get().then((doc) {
+        if (doc.exists) {
+          setState(() {
+            currentUserName = doc.data()?["name"] ?? "User";
+            currentUserImage = doc.data()?["imageUrl"] ?? "https://via.placeholder.com/150";
+          });
+        }
       });
 
-      _messageController.clear(); // Clear the text field
+      chatController.initChat(currentUserId, widget.provider.id);
     }
   }
 
@@ -71,15 +75,8 @@ class _ChatWithUserState extends State<ChatWithUser> {
         title: Row(
           children: [
             IconButton(
-              icon: Icon(
-                Icons.arrow_back_ios,
-                color: Colors.white,
-                size: 24.sp,
-              ),
-              onPressed: () {
-                Navigator.of(context)
-                    .pop(); // Navigate back to the previous screen
-              },
+              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 24.sp),
+              onPressed: () => Navigator.of(context).pop(),
             ),
             GestureDetector(
               onTap: () => _showAvatarDialog(context),
@@ -101,128 +98,59 @@ class _ChatWithUserState extends State<ChatWithUser> {
           ],
         ),
       ),
+
       body: Column(
         children: [
+          // Messages list
           Expanded(
-            child: ListView.builder(
-              reverse: true,
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final messageData = _messages[index];
-                final message = messageData['message'];
-                final timestamp = messageData['timestamp'];
-                final date = messageData['date'];
-                return Padding(
-                  padding: EdgeInsets.symmetric(
-                      vertical: 5.h), // Height between messages
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Container(
-                        constraints: BoxConstraints(
-                          maxWidth: 250.w,
-                        ),
-                        decoration: BoxDecoration(
-                          color: AppColors.logocolor,
-                          borderRadius: BorderRadius.circular(12.r),
-                        ),
-                        padding: EdgeInsets.all(8.w), // Add padding for content
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    widget.provider.fullName,
-                                    textAlign: TextAlign.left,
-                                    style: TextStyle(
-                                      fontSize: 14.sp,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                      fontFamily: 'Urbanist',
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(width: 8.w),
-                                CircleAvatar(
-                                  radius: 16.r,
-                                  backgroundImage:
-                                      NetworkImage(widget.provider.imageUrl),
-                                ),
-                              ],
-                            ),
-                            SizedBox(
-                                height: 4
-                                    .h), // Adjust space between name/avatar and message
-                            Text(
-                              message,
-                              textAlign: TextAlign.left,
-                              style: TextStyle(
-                                fontSize: 14.sp,
-                                color: Colors.white,
-                                fontFamily: 'Urbanist',
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(
-                          height: 4.h), // Space between message and date/time
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          Text(
-                            date,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.normal,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                          SizedBox(width: 4.w),
-                          Text(
-                            timestamp,
-                            style: TextStyle(
-                              fontSize: 12.sp,
-                              color: Colors.grey,
-                              fontWeight: FontWeight.normal,
-                              fontFamily: 'Urbanist',
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
+            child: Obx(() {
+              final msgs = chatController.messages;
+
+              if (msgs.isEmpty) {
+                return Center(
+                  child: Text(
+                    "No messages yet",
+                    style: TextStyle(fontSize: 14.sp, color: Colors.grey),
                   ),
                 );
-              },
-            ),
+              }
+
+              return ListView.builder(
+                reverse: true,
+                itemCount: msgs.length,
+                itemBuilder: (context, index) {
+                  final message = msgs[index];
+                  final isMe = message.senderId == currentUserId;
+
+                  return Align(
+                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    child: Container(
+                      margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
+                      padding: EdgeInsets.all(10.w),
+                      decoration: BoxDecoration(
+                        color: isMe ? AppColors.logocolor : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      child: Text(
+                        message.text,
+                        style: TextStyle(
+                          color: isMe ? Colors.white : Colors.black,
+                          fontSize: 14.sp,
+                          fontFamily: 'Urbanist',
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              );
+            }),
           ),
+
+          // Input box
           CustomContainer(
             height: 50.h,
             child: Row(
               children: [
-                IconButton(
-                  icon: const Icon(
-                    Icons.camera_alt,
-                    color: AppColors.logocolor,
-                  ),
-                  onPressed: () {
-                    // Add your camera action here
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.photo,
-                    color: AppColors.logocolor,
-                  ),
-                  onPressed: () {
-                    // Add your photo action here
-                  },
-                ),
                 Expanded(
                   child: TextField(
                     controller: _messageController,
@@ -234,20 +162,29 @@ class _ChatWithUserState extends State<ChatWithUser> {
                         fontWeight: FontWeight.bold,
                         fontFamily: 'Urbanist',
                       ),
-                      border: const OutlineInputBorder(
-                        borderSide: BorderSide.none,
-                      ),
-                      contentPadding:
-                          const EdgeInsets.symmetric(horizontal: 16.0),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
                     ),
                   ),
                 ),
                 IconButton(
-                  icon: const Icon(
-                    Icons.send,
-                    color: AppColors.logocolor,
-                  ),
-                  onPressed: _sendMessage,
+                  icon: Icon(Icons.send, color: AppColors.logocolor),
+                  onPressed: () async {
+                    final text = _messageController.text.trim();
+                    if (text.isEmpty) return;
+
+                    await chatController.sendMessage(
+                      text: text,
+                      senderId: currentUserId,
+                      receiverId: widget.provider.id,
+                      senderName: currentUserName,
+                      senderImage: currentUserImage,
+                      receiverName: widget.provider.fullName,
+                      receiverImage: widget.provider.imageUrl,
+                    );
+
+                    _messageController.clear();
+                  },
                 ),
               ],
             ),
