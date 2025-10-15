@@ -32,7 +32,15 @@ dependencies:
   firebase_app_check: ^0.3.2+10
   intl: ^0.20.2
   lottie: ^3.3.2
-
+  url_launcher: ^6.3.2
+  flutter_google_places_hoc081098: ^2.0.0
+  google_maps_flutter: ^2.13.1
+  geocoding: ^4.0.0
+  geolocator: ^14.0.2
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/images/bg_logo.png"
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -59,7 +67,6 @@ flutter:
     - assets/images/
     - assets/icons/
     - assets/fonts/
-    - assets/images/homepics/
     - assets/images/services/
 
   # An image asset can refer to one or more resolution-specific "variants", see

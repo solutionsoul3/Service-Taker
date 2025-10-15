@@ -179,27 +179,27 @@ class _AboutScreenState extends State<AboutScreen> {
                   children: [
                     SizedBox(height: 20.h),
                     Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        IconButton(
-                          icon: const Icon(Icons.menu, color: Colors.white),
-                          onPressed: () {
-                            _scaffoldKey.currentState?.openDrawer();
-                          },
-                        ),
+                        // IconButton(
+                        //   icon: const Icon(Icons.menu, color: Colors.white),
+                        //   onPressed: () {
+                        //     _scaffoldKey.currentState?.openDrawer();
+                        //   },
+                        // ),
+                        SizedBox(width: 20.h,),
                         Text(
                           'Account',
                           style: TextStyle(
                             fontFamily: 'Urbanist',
                             color: Colors.white,
-                            fontSize: 20.sp,
+                            fontSize: 24.sp,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        IconButton(
-                          icon: const Icon(Icons.notifications_active, color: Colors.white),
-                          onPressed: () {},
-                        ),
+                        // IconButton(
+                        //   icon: const Icon(Icons.notifications_active, color: Colors.white),
+                        //   onPressed: () {},
+                        // ),
                       ],
                     ),
                     SizedBox(height: 10.h),

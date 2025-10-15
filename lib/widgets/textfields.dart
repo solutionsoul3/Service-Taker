@@ -92,25 +92,44 @@ class InputField extends StatelessWidget {
   }
 }
 
-class TextFieldWithIcon extends StatelessWidget {
+class TextFieldWithIcon extends StatefulWidget {
   final String labelText;
   final IconData icon;
-  final String hintText;
+  final String? hintText;
   final bool obscureText;
   final TextInputType keyboardType;
-  final double iconSize; // Added iconSize property.
-  final TextEditingController controller; // Add the controller property.
+  final double iconSize;
+  final TextEditingController? controller;
+  final String? Function(String?)? validator;
+  final VoidCallback? onTap;       // ✅ Add this
+  final bool readOnly;
 
   const TextFieldWithIcon({
     super.key,
+    this.validator,
     required this.labelText,
     required this.icon,
-    required this.hintText,
-    required this.controller, // Controller is required now.
+    this.hintText,
     this.obscureText = false,
     this.keyboardType = TextInputType.text,
-    this.iconSize = 24.0, // Default icon size.
+    this.iconSize = 24.0,
+    this.controller,
+    this.onTap,
+    this.readOnly = false,
   });
+
+  @override
+  State<TextFieldWithIcon> createState() => _TextFieldWithIconState();
+}
+
+class _TextFieldWithIconState extends State<TextFieldWithIcon> {
+  late bool _isObscure;
+
+  @override
+  void initState() {
+    super.initState();
+    _isObscure = widget.obscureText;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -118,41 +137,56 @@ class TextFieldWithIcon extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          labelText,
+          widget.labelText,
           style: TextStyle(
             color: Colors.black,
             fontFamily: 'Urbanist',
-            fontSize: 15.sp, // Use ScreenUtil for responsive font size.
+            fontSize: 15.sp,
           ),
         ),
-        const SizedBox(
-            height: 8.0), // Add some spacing between label and text field.
+        const SizedBox(height: 8.0),
         Padding(
           padding: EdgeInsets.only(left: 10.w),
           child: Row(
             children: [
               Icon(
-                icon,
+                widget.icon,
                 color: Colors.grey,
-                size: iconSize, // Set the icon size.
+                size: widget.iconSize,
               ),
-              SizedBox(
-                width: 10.w,
-              ),
+              SizedBox(width: 10.w),
               Expanded(
-                child: TextField(
-                  controller: controller, // Use the controller here.
-                  obscureText: obscureText,
-                  keyboardType: keyboardType,
+                child: TextFormField(
+                  readOnly: widget.readOnly,         // ✅ Pass it to TextFormField
+                  onTap: widget.onTap,
+                  controller: widget.controller,
+                  validator: widget.validator, // ✅ Now works correctly
+                  obscureText: _isObscure,
+                  keyboardType: widget.keyboardType,
                   decoration: InputDecoration(
-                    hintText: hintText,
+                    hintText: widget.hintText,
                     hintStyle: TextStyle(
-                      color: Colors.grey, // Set the hint text color.
-                      fontSize: 14.sp, fontFamily: 'Urbanist',
+                      color: Colors.grey,
+                      fontSize: 14.sp,
+                      fontFamily: 'Urbanist',
                     ),
                     border: InputBorder.none,
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 8.0), // Adjust padding as needed.
+                    contentPadding: const EdgeInsets.symmetric(vertical: 8.0),
+                    suffixIcon: widget.obscureText
+                        ? IconButton(
+                      icon: Icon(
+                        _isObscure
+                            ? Icons.visibility_off
+                            : Icons.visibility,
+                        color: Colors.grey,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isObscure = !_isObscure;
+                        });
+                      },
+                    )
+                        : null,
                   ),
                 ),
               ),
@@ -163,3 +197,4 @@ class TextFieldWithIcon extends StatelessWidget {
     );
   }
 }
+

@@ -30,11 +30,11 @@ class _ExploreScreenState extends State<ExploreScreen> {
     {"catename": "Movers", "imageURL": "assets/icons/movers.png"},
     {"catename": "Internet Provider", "imageURL": "assets/icons/internet_provider.png"},
     {"catename": "Gas Provider", "imageURL": "assets/icons/gas_provider.png"},
-    {"catename": "Carpenter", "imageURL": "assets/icons/carpenter.png"},
-    {"catename": "Gardener", "imageURL": "assets/icons/gardener.png"},
-    {"catename": "AC Repair", "imageURL": "assets/icons/ac_repair.png"},
-    {"catename": "Appliance Repair", "imageURL": "assets/icons/appliance_repair.png"},
-    {"catename": "Pest Control", "imageURL": "assets/icons/pest_control.png"},
+    // {"catename": "Carpenter", "imageURL": "assets/icons/carpenter.png"},
+    // {"catename": "Gardener", "imageURL": "assets/icons/gardener.png"},
+    // {"catename": "AC Repair", "imageURL": "assets/icons/ac_repair.png"},
+    // {"catename": "Appliance Repair", "imageURL": "assets/icons/appliance_repair.png"},
+    // {"catename": "Pest Control", "imageURL": "assets/icons/pest_control.png"},
   ];
 
   @override

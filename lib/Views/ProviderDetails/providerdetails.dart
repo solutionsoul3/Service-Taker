@@ -2,7 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:lottie/lottie.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:lottie/lottie.dart' hide Marker;
 import 'package:talk/Models/ProviderModel.dart';
 import 'package:talk/Views/ChatScreen/chattingscreenwithuser.dart';
 import 'package:talk/constants/colors.dart';
@@ -85,23 +86,68 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   Future<void> _fetchUserRating() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
 
-      var snapshot = await FirebaseFirestore.instance
+      var doc = await FirebaseFirestore.instance
           .collection('Provider')
           .doc(widget.provider.id)
           .collection('Reviews')
-          .where('userId', isEqualTo: userId)
-          .limit(1)
+          .doc(userId) // 👈 we store by uid
           .get();
 
-      if (snapshot.docs.isNotEmpty) {
+      if (doc.exists) {
         setState(() {
-          userRating = snapshot.docs.first['rating']; // 👈 existing rating
-          selectedRating = userRating; // show it in stars
+          userRating = doc['rating'];
+          selectedRating = userRating;
         });
       }
     } catch (e) {
       print("Error fetching user rating: $e");
+    }
+  }
+
+  /// ✅ Save or update rating with user details
+  Future<void> _saveUserRating(int rating) async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user == null) return;
+
+      // 🔹 Fetch user profile from Firestore (not only from FirebaseAuth)
+      final userDoc = await FirebaseFirestore.instance
+          .collection("User")
+          .doc(user.uid)
+          .get();
+
+      if (!userDoc.exists) {
+        print("User profile not found!");
+        return;
+      }
+
+      final userData = userDoc.data() ?? {};
+      final userName = userData["name"] ?? "Anonymous";
+      final userImage = userData["imageUrl"] ?? "";
+
+      await FirebaseFirestore.instance
+          .collection('Provider')
+          .doc(widget.provider.id)
+          .collection('Reviews')
+          .doc(user.uid) // 👈 overwrite if exists
+          .set({
+        "userId": user.uid,
+        "userName": userName,
+        "userImage": userImage,
+        "rating": rating,
+        "createdAt": FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      setState(() {
+        userRating = rating;
+        selectedRating = rating;
+      });
+
+      _showThankYouPopup(widget.provider.fullName);
+    } catch (e) {
+      print("Error saving user rating: $e");
     }
   }
 
@@ -132,41 +178,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
       stars.add(
         GestureDetector(
           onTap: () async {
-            setState(() {
-              selectedRating = i;
-            });
-
-            final userId = FirebaseAuth.instance.currentUser?.uid;
-
-            // ✅ Check if user already rated → update instead of adding new doc
-            var snapshot = await FirebaseFirestore.instance
-                .collection('Provider')
-                .doc(widget.provider.id)
-                .collection('Reviews')
-                .where('userId', isEqualTo: userId)
-                .limit(1)
-                .get();
-
-            if (snapshot.docs.isNotEmpty) {
-              // update existing
-              await snapshot.docs.first.reference.update({
-                "rating": i,
-                "createdAt": FieldValue.serverTimestamp(),
-              });
-            } else {
-              // add new
-              await FirebaseFirestore.instance
-                  .collection('Provider')
-                  .doc(widget.provider.id)
-                  .collection('Reviews')
-                  .add({
-                "rating": i,
-                "createdAt": FieldValue.serverTimestamp(),
-                "userId": userId,
-              });
-            }
-
-            _showThankYouPopup(widget.provider.fullName);
+            await _saveUserRating(i); // 👈 replaced inline logic
           },
           child: Icon(
             i <= selectedRating ? Icons.star : Icons.star_border,
@@ -195,11 +207,10 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 // 🎉 Lottie Animation (download JSON from lottiefiles.com)
-                Lottie.asset(
+                Image.asset(
                   'assets/images/thankyou.gif',
-                  width: 120,
-                  height: 120,
-                  repeat: false,
+                  width: 150,
+                  height: 150,
                 ),
                 const SizedBox(height: 10),
                 Text(
@@ -220,7 +231,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     );
 
     // Auto close after 2 seconds
-    Future.delayed(const Duration(seconds: 2), () {
+    Future.delayed(const Duration(seconds: 5), () {
       if (Navigator.canPop(context)) Navigator.pop(context);
     });
   }
@@ -351,7 +362,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'If you have any question :',
+                        'If you want to contact :',
                         style: reusableTextStyle(
                           fontSize: 13.sp,
                           color: Colors.grey,
@@ -396,38 +407,62 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(10.r),
-                    child: Image.asset(
-                      AppImages.map,
-                      fit: BoxFit.cover,
-                      height: 150.h,
-                      width: double.infinity,
+
+                  if (widget.provider.latitude != 0.0 && widget.provider.longitude != 0.0)
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(10.r),
+                      child: SizedBox(
+                        height: 100.h,
+                        width: double.infinity,
+                        child: GoogleMap(
+                          initialCameraPosition: CameraPosition(
+                            target: LatLng(
+                                widget.provider.latitude, widget.provider.longitude),
+                            zoom: 14.5,
+                          ),
+                          markers: {
+                            Marker(
+                              markerId: MarkerId(widget.provider.id),
+                              position: LatLng(
+                                  widget.provider.latitude, widget.provider.longitude),
+                              infoWindow: InfoWindow(title: widget.provider.fullName),
+                            ),
+                          },
+                          zoomControlsEnabled: false,
+                          scrollGesturesEnabled: false,
+                          myLocationButtonEnabled: false,
+                          tiltGesturesEnabled: false,
+                        ),
+                      ),
                     ),
-                  ),
+                  SizedBox(height: 10.h),
                   Padding(
-                    padding:
-                        EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
-                        Text(
-                          widget.provider.location,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.black,
-                            fontFamily: 'Urbanist',
-                            fontWeight: FontWeight.bold,
+                        Expanded(
+                          child: Text(
+                            widget.provider.location,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              fontSize: 14.sp,
+                              color: Colors.black,
+                              fontFamily: 'Urbanist',
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ),
-                        const Icon(Icons.location_on,
-                            color: AppColors.logocolor),
+                        const Icon(Icons.location_on, color: AppColors.logocolor),
                       ],
                     ),
                   ),
+                  SizedBox(height: 10.h),
                 ],
               ),
             ),
+
             SizedBox(
               height: 20.h,
             ),
@@ -590,18 +625,18 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
             },
           ),
         ),
-        Positioned(
-          top: 20.h,
-          right: 16.w,
-          child: IconButton(
-            icon: Icon(
-              isFavorited ? Icons.favorite : Icons.favorite_border,
-              color: isFavorited ? Colors.red : Colors.white,
-              size: 26.sp,
-            ),
-            onPressed: _toggleFavorite,
-          ),
-        ),
+        // Positioned(
+        //   top: 20.h,
+        //   right: 16.w,
+        //   child: IconButton(
+        //     icon: Icon(
+        //       isFavorited ? Icons.favorite : Icons.favorite_border,
+        //       color: isFavorited ? Colors.red : Colors.white,
+        //       size: 26.sp,
+        //     ),
+        //     onPressed: _toggleFavorite,
+        //   ),
+        // ),
       ],
     );
   }

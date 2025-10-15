@@ -18,14 +18,9 @@ class ChatScreen extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.logocolor,
         elevation: 0,
-        leading: IconButton(
-          icon: Icon(
-            Icons.arrow_back_ios_rounded,
-            color: Colors.white, // keep white to match your text
-            size: 20.sp,
-          ),
-          onPressed: () => Navigator.pop(context),
-        ),
+
+        centerTitle: true,
+        automaticallyImplyLeading: false,
         title: Text(
           'Chats',
           style: TextStyle(
@@ -35,7 +30,7 @@ class ChatScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-        centerTitle: true,
+
       ),
 
       body: StreamBuilder<QuerySnapshot>(
@@ -74,7 +69,29 @@ class ChatScreen extends StatelessWidget {
               );
 
               return ListTile(
-                leading: CircleAvatar(backgroundImage: NetworkImage(userImage)),
+                leading: CircleAvatar(
+                  radius: 25,
+                  backgroundColor: Colors.grey,
+                  child: ClipOval(
+                    child: userImage.isNotEmpty
+                        ? Image.network(
+                      userImage,
+                      fit: BoxFit.cover,
+                      width: 50,
+                      height: 50,
+                      errorBuilder: (context, error, stackTrace) => const Icon(
+                        Icons.person,
+                        color: Colors.white,
+                        size: 26,
+                      ),
+                    )
+                        : const Icon(
+                      Icons.person,
+                      color: Colors.white,
+                      size: 26,
+                    ),
+                  ),
+                ),
                 title: Text(userName, style: TextStyle(color: AppColors.logocolor)),
                 subtitle: Text(room["lastMessage"] ?? ""),
                 trailing: Text(

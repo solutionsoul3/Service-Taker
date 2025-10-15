@@ -3,31 +3,31 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../Constants/colors.dart';
 
-class PrivacyPolicyScreen extends StatefulWidget {
-  const PrivacyPolicyScreen({Key? key}) : super(key: key);
+class TermAndConditionScreen extends StatefulWidget {
+  const TermAndConditionScreen({Key? key}) : super(key: key);
 
   @override
-  State<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
+  State<TermAndConditionScreen> createState() => _TermAndConditionScreenState();
 }
 
-class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
+class _TermAndConditionScreenState extends State<TermAndConditionScreen> {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  /// 🔹 Fetch Privacy Policy directly from Firestore
-  Future<Map<String, dynamic>?> _getPolicy() async {
+  /// 🔹 Get terms from Firestore directly (no default content)
+  Future<Map<String, dynamic>?> _getTerms() async {
     try {
       DocumentSnapshot doc = await _firestore
-          .collection("PrivacyPolicy")
-          .doc("policy_document")
+          .collection("Terms&conditions")
+          .doc("terms_and_conditions")
           .get();
       if (doc.exists) {
         return doc.data() as Map<String, dynamic>?;
       } else {
-        debugPrint("Privacy Policy document not found.");
+        debugPrint("Terms document not found.");
         return null;
       }
     } catch (e) {
-      debugPrint("Error fetching privacy policy: $e");
+      debugPrint("Error fetching terms: $e");
       return null;
     }
   }
@@ -41,7 +41,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
         backgroundColor: AppColors.logocolor,
         elevation: 0,
         title: const Text(
-          "Privacy Policy",
+          "Terms & Conditions",
           style: TextStyle(color: Colors.white),
         ),
         centerTitle: true,
@@ -51,7 +51,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
         ),
       ),
       body: FutureBuilder<Map<String, dynamic>?>(
-        future: _getPolicy(),
+        future: _getTerms(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return Center(
@@ -61,7 +61,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
           if (!snapshot.hasData || snapshot.data == null) {
             return const Center(
               child: Text(
-                "Privacy Policy not available.",
+                "Terms & Conditions not available.",
                 style: TextStyle(color: Colors.black),
               ),
             );
@@ -77,10 +77,9 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
               children: [
                 Center(
                   child: Text(
-                    data["heading"] ??
-                        "Privacy Policy",
+                    data["heading"] ?? "Terms & Conditions",
                     style: TextStyle(
-                      fontSize: 16.sp,
+                      fontSize: 22.sp,
                       fontWeight: FontWeight.bold,
                       color: AppColors.logocolor,
                     ),
@@ -108,7 +107,7 @@ class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
                     ),
                   ),
                   SizedBox(height: 15.h),
-                ],
+                ]
               ],
             ),
           );

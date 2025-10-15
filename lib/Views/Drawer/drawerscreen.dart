@@ -4,6 +4,7 @@ import 'package:talk/Models/UserModel.dart';
 import 'package:talk/Views/AboutUs/AboutUs.dart';
 import 'package:talk/Views/FeedBack/feedback.dart';
 import 'package:talk/Views/PrivacyPolicy/PrivacyPolicy.dart';
+import 'package:talk/Views/Term&Condition/term_and_condition.dart';
 import 'package:talk/Views/auth/HelpScreen/helpscreen.dart';
 import 'package:talk/Views/auth/login_screen.dart';
 
@@ -87,15 +88,21 @@ class _DrawerViewState extends State<DrawerView> {
                 children: [
                   CircleAvatar(
                     radius: 40.r,
-                    backgroundColor: Colors.grey[300],
-                    backgroundImage: const AssetImage(AppImages.applogo),
+                    backgroundColor: Colors.grey.shade300,
+                    backgroundImage: (currentUser?.imageUrl != null &&
+                        currentUser!.imageUrl!.isNotEmpty)
+                        ? NetworkImage(currentUser!.imageUrl!)
+                        : null,
+                    child: (currentUser?.imageUrl == null || currentUser!.imageUrl!.isEmpty)
+                        ? const Icon(Icons.person, color: Colors.white, size: 28)
+                        : null,
                   ),
                   SizedBox(height: 12.h),
                   Text(
                     currentUser?.name ?? 'Loading...',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 15.sp,
+                      fontSize: 16.sp,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -158,21 +165,24 @@ class _DrawerViewState extends State<DrawerView> {
             ),
           ),
 
-          _listTile('Feed Back', Icons.feedback,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const FeedBackScreen()))),
+          // _listTile('Feed Back', Icons.feedback,
+          //     onTap: () => Navigator.push(context,
+          //         MaterialPageRoute(builder: (_) => const FeedBackScreen()))),
           _listTile('Privacy Policy', Icons.policy,
               onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const PrivacyPolicy()))),
+                  MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()))),
+          _listTile('Term&Condition', Icons.interpreter_mode_sharp,
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const TermAndConditionScreen()))),
           _listTile('About Us', Icons.info,
               onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const AboutScreenUs()))),
+                  MaterialPageRoute(builder: (_) => const AboutUs()))),
           _listTile('Help', Icons.help,
               onTap: () => Navigator.push(context,
                   MaterialPageRoute(builder: (_) => const HelpScreen()))),
-          _listTile('Settings', Icons.settings,
-              onTap: () => Navigator.push(context,
-                  MaterialPageRoute(builder: (_) => const HelpScreen()))),
+          // _listTile('Settings', Icons.settings,
+          //     onTap: () => Navigator.push(context,
+          //         MaterialPageRoute(builder: (_) => const HelpScreen()))),
 
           /// Logout
           _listTile('Logout', Icons.logout, onTap: _logout),

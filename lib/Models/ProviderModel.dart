@@ -9,7 +9,6 @@ class Availability {
     required this.endTime,
   });
 
-  // Factory method to create an Availability object from a map
   factory Availability.fromMap(Map<String, dynamic> data) {
     return Availability(
       day: data['day'] ?? '',
@@ -41,6 +40,10 @@ class ProviderModel {
   String uid;
   List<Availability> availability;
 
+  // ✅ Added fields
+  double latitude;
+  double longitude;
+
   ProviderModel({
     this.id = '',
     this.fullName = '',
@@ -57,18 +60,18 @@ class ProviderModel {
     this.status = '',
     this.uid = '',
     this.availability = const [],
+    this.latitude = 0.0, // default 0.0
+    this.longitude = 0.0, // default 0.0
   });
 
-
-  // Factory method to create a ProviderModel object from a map
   factory ProviderModel.fromMap(Map<String, dynamic> data, String documentId) {
     print('Mapping data for document: $documentId');
     print('Raw data: $data');
 
     List<Availability> availabilityList =
-        (data['availability'] as List<dynamic>? ?? [])
-            .map((item) => Availability.fromMap(item))
-            .toList();
+    (data['availability'] as List<dynamic>? ?? [])
+        .map((item) => Availability.fromMap(item))
+        .toList();
 
     return ProviderModel(
       id: documentId,
@@ -88,11 +91,19 @@ class ProviderModel {
       status: data['status'] ?? 'Inactive',
       uid: data['uid'] ?? '',
       availability: availabilityList,
+
+      // ✅ Added mapping for coordinates
+      latitude: (data['latitude'] != null)
+          ? double.tryParse(data['latitude'].toString()) ?? 0.0
+          : 0.0,
+      longitude: (data['longitude'] != null)
+          ? double.tryParse(data['longitude'].toString()) ?? 0.0
+          : 0.0,
     );
   }
 
   @override
   String toString() {
-    return 'ProviderModel(id: $id, fullName: $fullName, description: $description, email: $email, contactNumber: $contactNumber, experience: $experience, experienceDescription: $experienceDescription, formFilled: $formFilled, imageUrl: $imageUrl, location: $location, pricePerHour: $pricePerHour, service: $service, status: $status, uid: $uid, availability: $availability)';
+    return 'ProviderModel(id: $id, fullName: $fullName, description: $description, email: $email, contactNumber: $contactNumber, experience: $experience, experienceDescription: $experienceDescription, formFilled: $formFilled, imageUrl: $imageUrl, location: $location, pricePerHour: $pricePerHour, service: $service, status: $status, uid: $uid, latitude: $latitude, longitude: $longitude, availability: $availability)';
   }
 }

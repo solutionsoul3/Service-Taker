@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
@@ -5,6 +6,9 @@ import '../../Constants/colors.dart';
 import '../../Controller/provider-controller.dart';
 import '../../Models/ProviderModel.dart';
 import '../ProviderDetails/providerdetails.dart';
+import 'dart:math' show cos, sqrt, asin, pi, sin;
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 
 class ExploreCategory extends StatefulWidget {
   final dynamic category; // full category object
@@ -23,47 +27,148 @@ class ExploreCategory extends StatefulWidget {
 class _ExploreCategoryState extends State<ExploreCategory>
     with SingleTickerProviderStateMixin {
   final ProviderController controller = Get.put(ProviderController());
-
-  List<ProviderModel> filteredProviders = [];
-  TextEditingController searchController = TextEditingController();
-  String selectedSortOption = '';
+  List<ProviderModel> nearestProviders = [];
   double _scaleFactor = 1.0;
+  double? userLat;
+  double? userLng;
+  String _currentLocation = "Fetching location...";
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    controller
-        .fetchProvidersByCategory(widget.categoryName); // Firestore filter
+    _loadNearestProviders();
+    _getUserLocation();
   }
 
-  void filterProviders(String query) {
-    final providers = controller.providers;
-    if (query.isEmpty) {
-      setState(() => filteredProviders = providers);
-      return;
-    }
-    setState(() {
-      filteredProviders = providers.where((provider) {
-        final fullName = provider.fullName.toLowerCase();
-        final description = provider.description.toLowerCase();
-        final searchQuery = query.toLowerCase();
-        return fullName.contains(searchQuery) ||
-            description.contains(searchQuery);
+  Future<void> _loadNearestProviders() async {
+    try {
+      setState(() => _isLoading = true); // ✅ Start loading
+      // ✅ Request location permission
+      LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) return;
+
+      // ✅ Get current user position
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+      userLat = position.latitude;
+      userLng = position.longitude;
+
+      // ✅ Fetch all providers in this category
+      await controller.fetchProvidersByCategory(widget.categoryName);
+
+      // ✅ Filter providers that have valid coordinates
+      List<ProviderModel> validProviders = controller.providers.where((p) {
+        return p.latitude != 0.0 && p.longitude != 0.0;
       }).toList();
-    });
+
+      // ✅ Calculate distance and keep only those within 20 km
+      List<ProviderModel> nearby = validProviders.where((p) {
+        double distance =
+            calculateDistance(userLat!, userLng!, p.latitude, p.longitude);
+        return distance <= 20.0; // ✅ only providers within 20 km
+      }).toList();
+
+      // ✅ Sort nearby providers by distance (nearest first)
+      nearby.sort((a, b) {
+        double distanceA =
+            calculateDistance(userLat!, userLng!, a.latitude, a.longitude);
+        double distanceB =
+            calculateDistance(userLat!, userLng!, b.latitude, b.longitude);
+        return distanceA.compareTo(distanceB);
+      });
+
+      setState(() {
+        nearestProviders = nearby;
+      });
+    } catch (e) {
+      print("❌ Error loading nearest providers: $e");
+    }
+  }
+
+  double calculateDistance(double lat1, double lon1, double lat2, double lon2) {
+    const double R = 6371; // Earth's radius in km
+    double dLat = (lat2 - lat1) * pi / 180;
+    double dLon = (lon2 - lon1) * pi / 180;
+    double a = sin(dLat / 2) * sin(dLat / 2) +
+        cos(lat1 * pi / 180) *
+            cos(lat2 * pi / 180) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+    double c = 2 * asin(sqrt(a));
+    return R * c;
   }
 
   void sortProvidersByPrice({required bool ascending}) {
     setState(() {
-      filteredProviders.sort((a, b) => ascending
+      nearestProviders.sort((a, b) => ascending
           ? a.pricePerHour.compareTo(b.pricePerHour)
           : b.pricePerHour.compareTo(a.pricePerHour));
     });
   }
 
+  Future<void> _getUserLocation() async {
+    bool serviceEnabled;
+    LocationPermission permission;
+
+    // Step 1: Check if location service is enabled
+    serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      setState(() {
+        _currentLocation = "Location service disabled";
+      });
+      return;
+    }
+
+    // Step 2: Check location permission
+    permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied) {
+        setState(() {
+          _currentLocation = "Permission denied";
+        });
+        return;
+      }
+    }
+
+    if (permission == LocationPermission.deniedForever) {
+      setState(() {
+        _currentLocation = "Permission permanently denied";
+      });
+      return;
+    }
+
+    // Step 3: Get the current position
+    Position position = await Geolocator.getCurrentPosition(
+      desiredAccuracy: LocationAccuracy.high,
+    );
+
+    // Step 4: Get address details from coordinates
+    List<Placemark> placemarks =
+        await placemarkFromCoordinates(position.latitude, position.longitude);
+
+    if (placemarks.isNotEmpty) {
+      Placemark place = placemarks.first;
+      setState(() {
+        // 🧭 Full detailed place name
+        _currentLocation =
+            "${place.name ?? ''}, ${place.street ?? ''}, ${place.subLocality ?? ''}, "
+                    "${place.locality ?? ''}, ${place.administrativeArea ?? ''}, ${place.country ?? ''}"
+                .replaceAll(RegExp(r', ,'), ',')
+                .trim();
+      });
+    } else {
+      setState(() {
+        _currentLocation = "Unknown location";
+      });
+    }
+  }
+
   void sortProvidersByExperience({required bool ascending}) {
     setState(() {
-      filteredProviders.sort((a, b) => ascending
+      nearestProviders.sort((a, b) => ascending
           ? a.experience.compareTo(b.experience)
           : b.experience.compareTo(a.experience));
     });
@@ -106,6 +211,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
     );
   }
 
+  String selectedSortOption = '';
+
   Widget _buildFilterOption(String value, String title, IconData icon) {
     return RadioListTile<String>(
       value: value,
@@ -143,7 +250,7 @@ class _ExploreCategoryState extends State<ExploreCategory>
       backgroundColor: AppColors.bgcolor,
       body: CustomScrollView(
         slivers: [
-          // Modern App Bar Section
+          /// ✅ AppBar (kept exactly the same)
           SliverAppBar(
             expandedHeight: 250.h,
             floating: false,
@@ -169,27 +276,6 @@ class _ExploreCategoryState extends State<ExploreCategory>
                 onPressed: () => Navigator.pop(context),
               ),
             ),
-            actions: [
-              Container(
-                margin: EdgeInsets.only(right: 16.w, top: 8.h),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 4.r,
-                      offset: const Offset(0, 2),
-                    ),
-                  ],
-                ),
-                child: IconButton(
-                  icon: Icon(Icons.favorite_border_rounded,
-                      color: AppColors.logocolor, size: 22.sp),
-                  onPressed: () {},
-                ),
-              ),
-            ],
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: EdgeInsets.only(bottom: 16.h),
               centerTitle: true,
@@ -274,20 +360,25 @@ class _ExploreCategoryState extends State<ExploreCategory>
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              Icon(Icons.location_on,
-                                  color: Colors.white, size: 16.sp),
-                              SizedBox(width: 5.w),
-                              Text(
-                                "Lahore, Pakistan",
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontFamily: 'Urbanist',
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.w500,
+                              // Icon(Icons.location_on, color: Colors.white, size: 16.sp),
+                              // SizedBox(width: 5.w),
+                              Flexible(
+                                child: Text(
+                                  _currentLocation,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontFamily: 'Urbanist',
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.w500,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
+                          SizedBox(height: 16.h),
                         ],
                       ),
                     ),
@@ -296,105 +387,29 @@ class _ExploreCategoryState extends State<ExploreCategory>
               ),
             ),
           ),
-          // Search and filter section
+
+          /// ✅ Provider count
           SliverToBoxAdapter(
             child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(15.r),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 8.r,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: TextField(
-                  controller: searchController,
-                  onChanged: filterProviders,
-                  decoration: InputDecoration(
-                    contentPadding:
-                        EdgeInsets.symmetric(vertical: 15.h, horizontal: 20.w),
-                    border: InputBorder.none,
-                    hintText: 'Search providers...',
-                    hintStyle: TextStyle(
-                      color: Colors.grey,
-                      fontFamily: 'Urbanist',
-                      fontSize: 14.sp,
-                    ),
-                    prefixIcon: Icon(Icons.search, color: Colors.grey),
-                    suffixIcon: GestureDetector(
-                      onTap: showFilterOptions,
-                      child: Container(
-                        padding: EdgeInsets.all(10.r),
-                        child:
-                            Icon(Icons.filter_list_rounded, color: Colors.grey),
-                      ),
-                    ),
-                  ),
-                  style: TextStyle(fontSize: 16.sp),
+              padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+              child: Text(
+                "${nearestProviders.length} nearest ${widget.categoryName} providers found",
+                style: TextStyle(
+                  fontSize: 15.sp,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: "Urbanist",
                 ),
               ),
             ),
           ),
-          // Provider count
-          SliverToBoxAdapter(
-            child: Obx(() => Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  child: Text(
-                    "${controller.providers.length} ${widget.categoryName} providers available",
-                    style: TextStyle(
-                      fontSize: 15.sp,
-                      fontWeight: FontWeight.w600,
-                      fontFamily: "Urbanist",
-                    ),
-                  ),
-                )),
+
+          /// ✅ Provider List
+          SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, i) => _buildProviderCard(nearestProviders[i], ctx),
+              childCount: nearestProviders.length,
+            ),
           ),
-
-          // Provider list
-          Obx(() {
-            if (controller.isLoading.value) {
-              return SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 250.h,
-                  child: Center(
-                    child: CircularProgressIndicator(
-                      valueColor: AlwaysStoppedAnimation(AppColors.logocolor),
-                    ),
-                  ),
-                ),
-              );
-            }
-
-            if (controller.providers.isEmpty) {
-              return SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 250.h,
-                  child: Center(
-                    child: Text("No ${widget.categoryName} providers found",
-                        style:
-                            TextStyle(fontSize: 16.sp, fontFamily: "Urbanist")),
-                  ),
-                ),
-              );
-            }
-
-            final data = filteredProviders.isEmpty
-                ? controller.providers
-                : filteredProviders;
-
-            return SliverList(
-              delegate: SliverChildBuilderDelegate(
-                (ctx, i) => _buildProviderCard(data[i], ctx),
-                childCount: data.length,
-              ),
-            );
-          }),
         ],
       ),
     );
@@ -433,24 +448,33 @@ class _ExploreCategoryState extends State<ExploreCategory>
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Provider image
+                    /// 👤 Provider Image
                     Container(
                       height: 80.h,
                       width: 80.w,
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(16.r),
-                        image: DecorationImage(
-                          image: NetworkImage(provider.imageUrl),
-                          fit: BoxFit.cover,
-                        ),
+                        color: Colors.grey.shade300,
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16.r),
+                        child: provider.imageUrl.isNotEmpty
+                            ? Image.network(
+                                provider.imageUrl,
+                                fit: BoxFit.cover,
+                              )
+                            : const Icon(Icons.person,
+                                color: Colors.white, size: 40),
                       ),
                     ),
                     SizedBox(width: 15.w),
-                    // Provider details
+
+                    /// Info
                     Expanded(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          /// Name + Price
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
@@ -463,7 +487,7 @@ class _ExploreCategoryState extends State<ExploreCategory>
                                 ),
                               ),
                               Text(
-                                '\$${provider.pricePerHour}/hr',
+                                '\$${provider.pricePerHour}',
                                 style: TextStyle(
                                   fontSize: 16.sp,
                                   color: AppColors.logocolor,
@@ -474,33 +498,79 @@ class _ExploreCategoryState extends State<ExploreCategory>
                             ],
                           ),
                           SizedBox(height: 5.h),
-                          Row(
-                            children: [
-                              Icon(Icons.star,
-                                  color: Colors.amber, size: 16.sp),
-                              SizedBox(width: 4.w),
-                              Text(
-                                '4.5',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: Colors.grey[700],
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                              SizedBox(width: 10.w),
-                              Icon(Icons.work, color: Colors.grey, size: 16.sp),
-                              SizedBox(width: 4.w),
-                              Text(
-                                '${provider.experience} yrs',
-                                style: TextStyle(
-                                  fontSize: 14.sp,
-                                  color: Colors.grey[700],
-                                  fontFamily: 'Urbanist',
-                                ),
-                              ),
-                            ],
+                          // ⭐ Dynamic Rating from Firestore
+                          StreamBuilder<QuerySnapshot>(
+                            stream: FirebaseFirestore.instance
+                                .collection("Provider")
+                                .doc(provider.id)
+                                .collection("Reviews")
+                                .snapshots(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState ==
+                                  ConnectionState.waiting) {
+                                return Row(
+                                  children: [
+                                    Icon(Icons.star,
+                                        color: Colors.amber, size: 16.sp),
+                                    SizedBox(width: 4.w),
+                                    Text("...",
+                                        style: TextStyle(fontSize: 14.sp)),
+                                  ],
+                                );
+                              }
+                              if (!snapshot.hasData ||
+                                  snapshot.data!.docs.isEmpty) {
+                                return Row(
+                                  children: [
+                                    Icon(Icons.star_border,
+                                        color: Colors.grey, size: 16.sp),
+                                    SizedBox(width: 4.w),
+                                    Text(
+                                      "No reviews",
+                                      style: TextStyle(
+                                        fontSize: 13.sp,
+                                        color: Colors.grey[600],
+                                        fontFamily: 'Urbanist',
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              }
+                              var reviews = snapshot.data!.docs;
+                              int totalReviews = reviews.length;
+                              double avgRating = 0.0;
+                              for (var r in reviews) {
+                                avgRating += (r['rating'] ?? 0).toDouble();
+                              }
+                              avgRating = avgRating / totalReviews;
+                              return Row(
+                                children: [
+                                  Icon(Icons.star,
+                                      color: Colors.amber, size: 16.sp),
+                                  SizedBox(width: 4.w),
+                                  Text(
+                                    avgRating.toStringAsFixed(1),
+                                    style: TextStyle(
+                                      fontSize: 14.sp,
+                                      color: Colors.grey[700],
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                  SizedBox(width: 6.w),
+                                  Text(
+                                    "($totalReviews reviews)",
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      color: Colors.blueGrey,
+                                      fontFamily: 'Urbanist',
+                                    ),
+                                  ),
+                                ],
+                              );
+                            },
                           ),
                           SizedBox(height: 8.h),
+                          SizedBox(height: 5.h),
                           Text(
                             provider.description,
                             style: TextStyle(
@@ -521,22 +591,32 @@ class _ExploreCategoryState extends State<ExploreCategory>
                 SizedBox(height: 12.h),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Icon(Icons.location_on,
-                            size: 16.sp, color: AppColors.logocolor),
-                        SizedBox(width: 5.w),
-                        Text(
-                          provider.location,
-                          style: TextStyle(
-                            fontSize: 14.sp,
-                            color: Colors.grey[600],
-                            fontFamily: 'Urbanist',
+                    // Left side: icon + location text
+                    Expanded(
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.location_on,
+                              size: 16.sp, color: AppColors.logocolor),
+                          SizedBox(width: 5.w),
+                          Expanded(
+                            child: Text(
+                              provider.location,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 14.sp,
+                                color: Colors.grey[600],
+                                fontFamily: 'Urbanist',
+                              ),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
+                    SizedBox(width: 10.w), // Right side: View Profile button
                     Container(
                       padding:
                           EdgeInsets.symmetric(horizontal: 12.w, vertical: 6.h),

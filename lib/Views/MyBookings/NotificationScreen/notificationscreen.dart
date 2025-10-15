@@ -12,11 +12,11 @@ class NotificationScreen extends StatefulWidget {
 class _NotificationScreenState extends State<NotificationScreen> {
   // Sample data lists
   final List<String> images = [
-    'assets/images/homepics/user1.jpg',
-    'assets/images/homepics/user2.jpg',
-    'assets/images/homepics/user3.jpg',
-    'assets/images/homepics/user4.jpg',
-    'assets/images/homepics/user5.jpg',
+    'assets/images/app_logo.jpg',
+    'assets/images/app_logo.jpg',
+    'assets/images/app_logo.jpg',
+    'assets/images/app_logo.jpg',
+    'assets/images/app_logo.jpg',
   ];
 
   final List<String> messages = [
@@ -44,37 +44,25 @@ class _NotificationScreenState extends State<NotificationScreen> {
         backgroundColor: AppColors.logocolor,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios,
+          icon: Icon(
+            Icons.arrow_back_ios_rounded,
+            color: Colors.white, // keep white to match your text
+            size: 20.sp,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text(
+          'Notification',
+          style: TextStyle(
             color: Colors.white,
-          ),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Center(
-          child: Text(
-            'Notifications',
-            style: TextStyle(
-              color: Colors.white,
-              fontFamily: 'Urbanist',
-              fontWeight: FontWeight.bold,
-              fontSize: 20.sp,
-            ),
+            fontFamily: 'Urbanist',
+            fontSize: 22.sp,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications,
-              color: Colors.white,
-            ),
-            onPressed: () {
-              // Add functionality for bell icon here
-            },
-          ),
-        ],
+        centerTitle: true,
       ),
+
       body: Padding(
         padding: EdgeInsets.symmetric(horizontal: 15.w),
         child: Column(

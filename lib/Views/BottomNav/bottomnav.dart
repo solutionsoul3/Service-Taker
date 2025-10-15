@@ -6,6 +6,7 @@ import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 
 import '../CallScreen/call-screen.dart';
+import '../ChatScreen/chatscreen.dart';
 import '../ChatScreens/chat-screen.dart';
 import '../Explore_Screen/explore-screen.dart';
 

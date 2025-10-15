@@ -7,6 +7,8 @@ class CategoryItem extends StatelessWidget {
 
   const CategoryItem({Key? key, required this.category}) : super(key: key);
 
+
+
   @override
   Widget build(BuildContext context) {
     final name = category['catename'] ?? '';

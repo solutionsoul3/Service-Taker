@@ -12,6 +12,8 @@ import 'package:talk/constants/image.dart';
 import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/widgets/textfields.dart';
 
+import '../Map_Location_Picker/map_location_picker.dart';
+
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
 
@@ -23,10 +25,13 @@ class _SignupScreenState extends State<SignupScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
+  double? _selectedLat;
+  double? _selectedLng;
   File? _selectedImage;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _addressController = TextEditingController();
   String _phoneNumber = '';
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -73,6 +78,9 @@ class _SignupScreenState extends State<SignupScreen> {
         // 'phoneNumber': _phoneNumber,
         'uid': uid,
         'imageUrl': imageUrl,
+        'location': _addressController.text,
+        'latitude': _selectedLat,
+        'longitude': _selectedLng,
       });
 
       Fluttertoast.showToast(msg: "Account created successfully!");
@@ -86,6 +94,21 @@ class _SignupScreenState extends State<SignupScreen> {
     } finally {
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+  Future<void> _selectLocationFromMap(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MapLocationPickerScreen()),
+    );
+
+    if (result != null) {
+      setState(() {
+        _addressController.text = result['address'];
+        _selectedLat = result['lat'];
+        _selectedLng = result['lng'];
       });
     }
   }
@@ -106,7 +129,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       SizedBox(height: 10.h),
                       Container(
-                        height: 380.h,
+                        height: 420.h,
                         width: 320.w,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -118,7 +141,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Full Name TextField
                               TextFieldWithIcon(
                                 labelText: "Full Name",
                                 icon: Icons.person,
@@ -127,7 +149,6 @@ class _SignupScreenState extends State<SignupScreen> {
                                 controller: _nameController,
                               ),
                               SizedBox(height: 10.h),
-                              // Email Address TextField
                               TextFieldWithIcon(
                                 labelText: "Email Address",
                                 icon: Icons.email,
@@ -144,6 +165,19 @@ class _SignupScreenState extends State<SignupScreen> {
                                 obscureText: true,
                                 iconSize: 20.0,
                                 controller: _passwordController,
+                              ),
+                              SizedBox(height: 10.h),
+                              TextFieldWithIcon(
+                                controller: _addressController,
+                                labelText: "Location",
+                                icon: Icons.location_on,
+                                iconSize: 20.0,
+                                hintText: "Enter location",
+                                validator: (v) => v == null || v.isEmpty
+                                    ? "Enter location"
+                                    : null,
+                                onTap: () => _selectLocationFromMap(context),
+                                readOnly: true,
                               ),
                             ],
                           ),

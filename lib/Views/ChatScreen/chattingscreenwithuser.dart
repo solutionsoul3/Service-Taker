@@ -82,8 +82,15 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
               onTap: () => _showAvatarDialog(context),
               child: CircleAvatar(
                 radius: 16.r,
-                backgroundImage: NetworkImage(widget.provider.imageUrl),
-              ),
+                backgroundColor: Colors.grey.shade300, // gray background
+                backgroundImage: (widget.provider.imageUrl.isNotEmpty)
+                    ? NetworkImage(widget.provider.imageUrl)
+                    : null,
+                child: (widget.provider.imageUrl.isEmpty)
+                    ? const Icon(Icons.person, color: Colors.white, size: 20)
+                    : null,
+              )
+
             ),
             SizedBox(width: 10.w),
             Text(
@@ -173,6 +180,10 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
                     final text = _messageController.text.trim();
                     if (text.isEmpty) return;
 
+                    // ✅ Clear the text field immediately
+                    _messageController.clear();
+
+                    // ✅ Then send the message in background
                     await chatController.sendMessage(
                       text: text,
                       senderId: currentUserId,
@@ -182,10 +193,9 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
                       receiverName: widget.provider.fullName,
                       receiverImage: widget.provider.imageUrl,
                     );
-
-                    _messageController.clear();
                   },
                 ),
+
               ],
             ),
           ),

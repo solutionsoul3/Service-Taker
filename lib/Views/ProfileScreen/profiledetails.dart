@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/cupertino.dart';
@@ -10,6 +9,7 @@ import 'package:talk/Models/UserModel.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/utility/user_service.dart';
+import '../Map_Location_Picker/map_location_picker.dart';
 
 class ProfileDetails extends StatefulWidget {
   const ProfileDetails({super.key});
@@ -21,11 +21,17 @@ class ProfileDetails extends StatefulWidget {
 class _ProfileDetailsState extends State<ProfileDetails> {
   File? _selectedImage;
   bool _isEditing = false;
-  UserModel? currentUser;
+  bool _isSaving = false;
 
-  late TextEditingController _nameController;
-  late TextEditingController _phoneController;
-  late TextEditingController _bioController;
+  UserModel? currentUser;
+  double? _latitude;
+  double? _longitude;
+
+  // ✅ Initialize controllers immediately
+  final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _phoneController = TextEditingController();
+  final TextEditingController _bioController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
 
   @override
   void initState() {
@@ -33,28 +39,60 @@ class _ProfileDetailsState extends State<ProfileDetails> {
     _loadUserData();
   }
 
+  // ✅ Load user info from Firestore (including location)
   Future<void> _loadUserData() async {
     UserService userService = UserService();
     UserModel? user = await userService.getUserDetails();
-    setState(() {
-      if (user != null) {
-        currentUser = user;
-        _nameController = TextEditingController(text: currentUser!.name);
-        _phoneController =
-            TextEditingController(text: currentUser!.phoneNumber);
-        _bioController = TextEditingController(text: currentUser!.bio ?? '');
-      } else {
-       
+
+    if (user != null) {
+      final userDoc = await FirebaseFirestore.instance
+          .collection('User')
+          .doc(user.uid)
+          .get();
+
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+
+        setState(() {
+          currentUser = user;
+
+          _nameController.text = data['name'] ?? '';
+          _phoneController.text = data['phoneNumber'] ?? '';
+          _bioController.text = data['bio'] ?? '';
+          _locationController.text = data['location'] ?? '';
+
+          _latitude = (data['latitude'] != null)
+              ? (data['latitude'] as num).toDouble()
+              : null;
+          _longitude = (data['longitude'] != null)
+              ? (data['longitude'] as num).toDouble()
+              : null;
+        });
       }
-    });
+    }
   }
 
   Future<void> _pickImage() async {
     final picker = ImagePicker();
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile != null) {
+      setState(() => _selectedImage = File(pickedFile.path));
+    }
+  }
+
+  Future<void> _pickLocation() async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => const MapLocationPickerScreen(),
+      ),
+    );
+
+    if (result != null && mounted) {
       setState(() {
-        _selectedImage = File(pickedFile.path);
+        _locationController.text = result["address"];
+        _latitude = result["lat"];
+        _longitude = result["lng"];
       });
     }
   }
@@ -62,75 +100,67 @@ class _ProfileDetailsState extends State<ProfileDetails> {
   Future<void> _updateUserData() async {
     if (currentUser == null) return;
 
-    final userDocRef =
-    FirebaseFirestore.instance.collection('User').doc(currentUser!.uid);
+    setState(() => _isSaving = true);
+    try {
+      final userDocRef =
+      FirebaseFirestore.instance.collection('User').doc(currentUser!.uid);
 
-    String? imageUrl;
+      String? imageUrl = currentUser!.imageUrl;
+      if (_selectedImage != null) {
+        final storageRef = FirebaseStorage.instance
+            .ref()
+            .child('user_images/${currentUser!.uid}.jpg');
+        await storageRef.putFile(_selectedImage!);
+        imageUrl = await storageRef.getDownloadURL();
+      }
 
-    // ✅ Upload new image if user selected one
-    if (_selectedImage != null) {
-      final storageRef = FirebaseStorage.instance
-          .ref()
-          .child('user_images/${currentUser!.uid}.jpg');
-      await storageRef.putFile(_selectedImage!);
-      imageUrl = await storageRef.getDownloadURL();
-    }
+      await userDocRef.set({
+        'name': _nameController.text.trim(),
+        'phoneNumber': _phoneController.text.trim(),
+        'bio': _bioController.text.trim(),
+        'imageUrl': imageUrl,
+        'email': currentUser!.email,
+        'location': _locationController.text.trim(),
+        'latitude': _latitude,
+        'longitude': _longitude,
+        'updatedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
 
-    // ✅ Update Firestore document
-    await userDocRef.set({
-      'name': _nameController.text.trim(),
-      'phoneNumber': _phoneController.text.trim(),
-      'bio': _bioController.text.trim(),
-      'imageUrl': imageUrl ?? currentUser!.imageUrl,
-      'email': currentUser!.email,
-      'updatedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
-
-    // ✅ Update local model so UI reflects changes without reload
-    setState(() {
-      currentUser = UserModel(
-        uid: currentUser!.uid,
-        name: _nameController.text.trim(),
-        email: currentUser!.email,
-        phoneNumber: _phoneController.text.trim(),
-        bio: _bioController.text.trim(),
-        imageUrl: imageUrl ?? currentUser!.imageUrl,
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: const Text("Success"),
+            content: const Text("Your profile has been saved successfully!"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: const Text("OK"),
+              ),
+            ],
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint("❌ Error updating user: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to save profile. Please try again.")),
       );
-    });
-
-    // ✅ Show dialog instead of SnackBar
-    if (mounted) {
-      showDialog(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text("Success"),
-          content: const Text("Your profile has been saved successfully!"),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(ctx).pop();
-              },
-              child: const Text("OK"),
-            ),
-          ],
-        ),
-      );
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
-
-
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.bgcolor,
+      resizeToAvoidBottomInset: true,
       appBar: AppBar(
         automaticallyImplyLeading: false,
         leading: IconButton(
           icon: const Icon(CupertinoIcons.back, color: Colors.white),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
+          onPressed: () => Navigator.of(context).pop(),
         ),
         title: Text(
           'Profile',
@@ -141,7 +171,6 @@ class _ProfileDetailsState extends State<ProfileDetails> {
               fontSize: 20.sp),
         ),
         backgroundColor: AppColors.logocolor,
-        elevation: 0,
         centerTitle: true,
         actions: [
           IconButton(
@@ -149,359 +178,225 @@ class _ProfileDetailsState extends State<ProfileDetails> {
                 _isEditing ? CupertinoIcons.check_mark : CupertinoIcons.pen,
                 color: Colors.white),
             onPressed: () async {
-              if (_isEditing) {
-                // Call the update function
-                await _updateUserData();
-              }
-              setState(() {
-                _isEditing = !_isEditing; // Toggle edit mode
-              });
+              if (_isEditing) await _updateUserData();
+              setState(() => _isEditing = !_isEditing);
             },
           ),
         ],
       ),
-      body: Padding(
-        padding: EdgeInsets.symmetric(horizontal: 20.w),
+      body: SafeArea(
         child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              SizedBox(height: 20.h),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Profile Details',
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontFamily: 'Urbanist',
-                        fontSize: 14.sp,
-                        fontWeight: FontWeight.bold),
-                  ),
-                  SizedBox(height: 10.h),
-                  Text(
-                    'Change the following details and save them.',
-                    style: TextStyle(
-                        color: Colors.black,
-                        fontFamily: 'Urbanist',
-                        fontSize: 13.sp),
-                  ),
-                ],
-              ),
+              Text('Profile Details',
+                  style: TextStyle(
+                      color: Colors.black,
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold)),
+              SizedBox(height: 10.h),
+              Text('Change the following details and save them.',
+                  style: TextStyle(fontSize: 13.sp)),
               SizedBox(height: 20.h),
 
-              // Image selection
+              /// Image Section
               Container(
-                height: 250.h,
-                width: MediaQuery.of(context).size.width,
+                width: double.infinity,
+                padding: EdgeInsets.all(12.w),
                 decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.r)),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text('Image',
-                              style: TextStyle(
-                                  color: Colors.black,
-                                  fontFamily: 'Urbanist',
-                                  fontSize: 14.sp,
-                                  fontWeight: FontWeight.bold)),
-
-                        ],
-                      ),
-                      SizedBox(height: 10.h),
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          GestureDetector(
-                            onTap: _pickImage,
-                            child: Container(
-                              height: 150.h,
-                              width: 150.w,
-                              decoration: BoxDecoration(
-                                  color:
-                                      const Color.fromARGB(255, 241, 239, 239),
-                                  borderRadius: BorderRadius.circular(10.r)),
-                              child: Center(
-                                child: Icon(Icons.add_a_photo,
-                                    size: 40.sp, color: Colors.grey),
-                              ),
-                            ),
-                          ),
-                          if (_selectedImage != null) // Show selected image
-                            Container(
-                              height: 150.h,
-                              width: 150.w,
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(10.r),
-                                image: DecorationImage(
-                                    image: FileImage(_selectedImage!),
-                                    fit: BoxFit.cover),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ],
-                  ),
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(10.r),
                 ),
-              ),
-              SizedBox(height: 20.h),
-
-              // Full Name
-              Container(
-                height: _isEditing ? 120.h : 80.h,
-                width: MediaQuery.of(context).size.width,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.r)),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Full Name',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontFamily: 'Urbanist',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10.h),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.person, color: Colors.grey, size: 19.sp),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: _isEditing
-                                ? TextField(
-                                    controller: _nameController,
-                                    decoration: const InputDecoration(
-                                        hintText: 'Enter your name'))
-                                : Text(
-                                    currentUser != null
-                                        ? currentUser!.name
-                                        : 'Loading...',
-                                    style: TextStyle(
-                                        color: Colors.black,
-                                        fontFamily: 'Urbanist',
-                                        fontSize: 13.sp)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 20.h),
-
-              // Email
-              Container(
-                height: 80.h,
-                width: MediaQuery.of(context).size.width,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.r)),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Email',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontFamily: 'Urbanist',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10.h),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.email, color: Colors.grey, size: 19.sp),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: Text(
-                                currentUser != null
-                                    ? currentUser!.email
-                                    : 'Loading...',
-                                style: TextStyle(
-                                    color: Colors.black,
-                                    fontFamily: 'Urbanist',
-                                    fontSize: 13.sp)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              SizedBox(height: 20.h),
-
-              // Phone Number
-              Container(
-                height: _isEditing ? 120.h : 80.h,
-                width: MediaQuery.of(context).size.width,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.r)),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Phone Number',
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Image',
                         style: TextStyle(
-                          color: Colors.black,
-                          fontFamily: 'Urbanist',
-                          fontSize: 14.sp,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      SizedBox(height: 10.h),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.center, // ✅ align with icon
-                        children: [
-                          Icon(Icons.phone, color: Colors.grey, size: 19.sp),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: _isEditing
-                                ? TextField(
-                              controller: _phoneController,
-                              style: TextStyle( // ✅ text style inside field
-                                fontFamily: 'Urbanist',
-                                fontSize: 13.sp,
-                                color: Colors.black,
-                              ),
-                              decoration: InputDecoration(
-                                contentPadding: EdgeInsets.symmetric(
-                                    vertical: 10.h, horizontal: 12.w), // ✅ neat padding
-                                border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(8.r),
-                                ),
-                                hintText: 'Enter your phone number',
-                              ),
-                              keyboardType: TextInputType.phone,
-                            )
-                                : Text(
-                              currentUser?.phoneNumber ?? 'Loading...',
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontFamily: 'Urbanist',
-                                fontSize: 13.sp,
-                              ),
+                            fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                    SizedBox(height: 10.h),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        GestureDetector(
+                          onTap: _pickImage,
+                          child: Container(
+                            height: 140.h,
+                            width: 140.w,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[200],
+                              borderRadius: BorderRadius.circular(10.r),
                             ),
+                            child: Icon(Icons.add_a_photo,
+                                size: 35.sp, color: Colors.grey),
                           ),
-                        ],
-                      ),
-                    ],
-
-                  ),
+                        ),
+                        if (_selectedImage != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10.r),
+                            child: Image.file(
+                              _selectedImage!,
+                              height: 140.h,
+                              width: 140.w,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else if (currentUser?.imageUrl != null)
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(10.r),
+                            child: Image.network(
+                              currentUser!.imageUrl!,
+                              height: 140.h,
+                              width: 140.w,
+                              fit: BoxFit.cover,
+                            ),
+                          )
+                        else
+                          Container(
+                            height: 140.h,
+                            width: 140.w,
+                            decoration: BoxDecoration(
+                              color: Colors.grey[300],
+                              borderRadius: BorderRadius.circular(10.r),
+                            ),
+                            child: const Icon(Icons.person,
+                                size: 40, color: Colors.white),
+                          ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
               SizedBox(height: 20.h),
 
-              // Short Biography
-              Container(
-                height: _isEditing ? 220.h : 100.h,
-                width: MediaQuery.of(context).size.width,
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(10.r)),
-                child: Padding(
-                  padding:
-                      EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('Short Biography',
-                          style: TextStyle(
-                              color: Colors.black,
-                              fontFamily: 'Urbanist',
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.bold)),
-                      SizedBox(height: 10.h),
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Icon(Icons.description,
-                              color: Colors.grey, size: 19.sp),
-                          SizedBox(width: 8.w),
-                          Expanded(
-                            child: _isEditing
-                                ? TextField(
-                                    controller: _bioController,
-                                    maxLines: 3,
-                                    decoration: const InputDecoration(
-                                        border: OutlineInputBorder(),
-                                        hintText: 'Enter a short biography'))
-                                : Text(
-                                    currentUser != null
-                                        ? currentUser!.bio ?? ''
-                                        : 'Loading...',
-                                    style: TextStyle(
-                                        color: Colors.black,
-                                        fontFamily: 'Urbanist',
-                                        fontSize: 13.sp)),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
+              _buildEditableField(
+                  "Full Name", Icons.person, _nameController,
+                  editable: _isEditing),
               SizedBox(height: 20.h),
+              _buildStaticField("Email", Icons.email,
+                  currentUser?.email ?? 'Loading...'),
+              SizedBox(height: 20.h),
+              _buildEditableField(
+                  "Phone Number", Icons.phone, _phoneController,
+                  editable: _isEditing),
+              SizedBox(height: 20.h),
+              _buildEditableField(
+                  "Short Biography", Icons.description, _bioController,
+                  editable: _isEditing, maxLines: 3),
+              SizedBox(height: 20.h),
+              _buildLocationField(),
 
-              // Save and Reset buttons
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  CustomElevatedButton(
-                    text: 'Save',
-                    onPressed: () async {
-                      await _updateUserData();
-                      setState(() {
-                        _isEditing = false; // Exit edit mode after saving
-                      });
-                    },
-                    height: 40.h,
-                    width: 230.w,
-                    backgroundColor: AppColors.logocolor,
-                    textColor: Colors.white,
-                    borderRadius: 10.r,
-                  ),
-                  SizedBox(width: 20.w),
-                  CustomElevatedButton(
-                    text: 'Reset',
-                    onPressed: () {
-                      // Reset the form fields
-                      setState(() {
-                        _nameController.text = currentUser?.name ?? '';
-                      //  _phoneController.text = currentUser?.phoneNumber ?? '';
-                        _bioController.text = currentUser?.bio ?? '';
-                        _selectedImage = null; // Reset selected image
-                      });
-                    },
-                    height: 40.h,
-                    width: 100.w,
-                    backgroundColor: Colors.grey,
-                    textColor: Colors.black,
-                    borderRadius: 10.r,
-                  ),
-                ],
+              SizedBox(height: 40.h),
+              Center(
+                child: _isSaving
+                    ? const CircularProgressIndicator(color: Colors.green)
+                    : CustomElevatedButton(
+                  text: 'Save',
+                  onPressed: () async {
+                    await _updateUserData();
+                    setState(() => _isEditing = false);
+                  },
+                  height: 45.h,
+                  width: 230.w,
+                  backgroundColor: AppColors.logocolor,
+                  textColor: Colors.white,
+                  borderRadius: 10.r,
+                ),
               ),
               SizedBox(height: 20.h),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEditableField(
+      String label, IconData icon, TextEditingController controller,
+      {bool editable = false, int maxLines = 1}) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(label,
+              style: TextStyle(fontSize: 14.sp, fontWeight: FontWeight.bold)),
+          SizedBox(height: 8.h),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(icon, color: Colors.grey, size: 19.sp),
+              SizedBox(width: 8.w),
+              Expanded(
+                child: editable
+                    ? TextField(
+                  controller: controller,
+                  maxLines: maxLines,
+
+                  decoration:
+                  const InputDecoration(border: InputBorder.none),
+                )
+                    : Text(
+                    controller.text.isNotEmpty
+                        ? controller.text
+                        : "No data available",
+                    style:
+                    TextStyle(fontSize: 13.sp, color: Colors.black)),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStaticField(String label, IconData icon, String value) {
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.all(12.w),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10.r),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: Colors.grey, size: 19.sp),
+          SizedBox(width: 8.w),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label,
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 14.sp)),
+                SizedBox(height: 8.h),
+                Text(value.isNotEmpty ? value : "No data available",
+                    style: TextStyle(fontSize: 13.sp)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLocationField() {
+    return GestureDetector(
+      onTap: _pickLocation,
+      child: AbsorbPointer(
+        child: _buildEditableField(
+          "Location",
+          Icons.location_on,
+          _locationController,
+          maxLines: 2,
+          editable: true,
         ),
       ),
     );
