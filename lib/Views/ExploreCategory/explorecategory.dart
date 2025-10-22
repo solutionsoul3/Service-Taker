@@ -357,27 +357,31 @@ class _ExploreCategoryState extends State<ExploreCategory>
                             ),
                           ),
                           SizedBox(height: 16.h),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              // Icon(Icons.location_on, color: Colors.white, size: 16.sp),
-                              // SizedBox(width: 5.w),
-                              Flexible(
-                                child: Text(
-                                  _currentLocation,
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontFamily: 'Urbanist',
-                                    fontSize: 14.sp,
-                                    fontWeight: FontWeight.w500,
+                          Padding(
+                            padding: EdgeInsets.symmetric(horizontal: 16.w), // ✅ Left & right padding
+                            child: Center(
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center, // ✅ Keeps text centered
+                                children: [
+                                  Flexible(
+                                    child: Text(
+                                      _currentLocation,
+                                      maxLines: 2,
+                                      overflow: TextOverflow.ellipsis,
+                                      textAlign: TextAlign.center, // ✅ Center text inside
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontFamily: 'Urbanist',
+                                        fontSize: 14.sp,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
                                   ),
-                                ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
+
                           SizedBox(height: 16.h),
                         ],
                       ),
@@ -487,7 +491,7 @@ class _ExploreCategoryState extends State<ExploreCategory>
                                 ),
                               ),
                               Text(
-                                '\$${provider.pricePerHour}',
+                                '\ksh${provider.pricePerHour}',
                                 style: TextStyle(
                                   fontSize: 16.sp,
                                   color: AppColors.logocolor,

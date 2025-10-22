@@ -479,7 +479,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                   ),
                   const Divider(),
                   Text(
-                    widget.provider.experienceDescription,
+                    widget.provider.description,
                     style: reusableTextStyle(
                       fontSize: 13.sp,
                       color: Colors.grey,
