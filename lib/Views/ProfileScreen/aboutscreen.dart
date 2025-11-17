@@ -131,6 +131,8 @@ class _AboutScreenState extends State<AboutScreen> {
         child: Stack(
           children: [
             BackgroundContainer(
+              width: 0,
+              radius: 0,
               child: Padding(
                 padding: EdgeInsets.only(top: 230.h),
                 child: Padding(

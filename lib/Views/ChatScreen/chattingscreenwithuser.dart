@@ -1,25 +1,25 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
-import 'package:talk/Models/ProviderModel.dart';
-import 'package:talk/constants/colors.dart';
-import 'package:talk/widgets/customcontainer.dart';
-
 import '../../Controller/chat-controller.dart';
+import '../../Models/ProviderModel.dart';
+import '../../Services/notification_service.dart';
+import '../../Constants/colors.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatWithProvider extends StatefulWidget {
   final ProviderModel provider;
   const ChatWithProvider({super.key, required this.provider});
 
   @override
-  _ChatWithProviderState createState() => _ChatWithProviderState();
+  State<ChatWithProvider> createState() => _ChatWithProviderState();
 }
 
 class _ChatWithProviderState extends State<ChatWithProvider> {
   final ChatController chatController = Get.put(ChatController());
   final TextEditingController _messageController = TextEditingController();
+
   late String currentUserId;
   String currentUserName = "User";
   String currentUserImage = "https://via.placeholder.com/150";
@@ -27,124 +27,198 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
   @override
   void initState() {
     super.initState();
+    _initializeChat();
+  }
+
+  Future<void> _initializeChat() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
       currentUserId = user.uid;
 
-      // Fetch Firestore fields for name and image
-      FirebaseFirestore.instance.collection("User").doc(currentUserId).get().then((doc) {
-        if (doc.exists) {
-          setState(() {
-            currentUserName = doc.data()?["name"] ?? "User";
-            currentUserImage = doc.data()?["imageUrl"] ?? "https://via.placeholder.com/150";
-          });
-        }
-      });
+      // ✅ Save FCM token
+      await NotificationService.saveUserToken(
+          uid: currentUserId, isProvider: false);
 
-      chatController.initChat(currentUserId, widget.provider.id);
+      // ✅ Fetch user's actual name and image from Firestore
+      await _fetchUserProfile();
+
+      // ✅ Initialize chat
+      chatController.initChat(currentUserId, widget.provider.id, false);
     }
   }
 
-  void _showAvatarDialog(BuildContext context) {
+  /// 🔹 Fetch current user's real name and profile image
+  Future<void> _fetchUserProfile() async {
+    try {
+      final userDoc = await FirebaseFirestore.instance
+          .collection("User")
+          .doc(currentUserId)
+          .get();
+      if (userDoc.exists) {
+        final data = userDoc.data()!;
+        setState(() {
+          currentUserName = data['name'] ?? "User";
+          currentUserImage = data['imageUrl'] ?? "https://via.placeholder.com/150";
+        });
+      } else {
+        // If user not found in "User", check "Provider"
+        final provDoc = await FirebaseFirestore.instance
+            .collection("Provider")
+            .doc(currentUserId)
+            .get();
+        if (provDoc.exists) {
+          final data = provDoc.data()!;
+          setState(() {
+            currentUserName = data['fullName'] ?? "Provider";
+            currentUserImage =
+                data['imageUrl'] ?? "https://via.placeholder.com/150";
+          });
+        }
+      }
+    } catch (e) {
+      print("⚠️ Error fetching user profile: $e");
+    }
+  }
+
+  void showSuccessAnimation(BuildContext context, String message) {
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          child: Container(
-            width: 300.w,
-            height: 300.h,
-            decoration: BoxDecoration(
-              image: DecorationImage(
-                image: NetworkImage(widget.provider.imageUrl),
-                fit: BoxFit.cover,
+      barrierDismissible: false,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
               ),
-              borderRadius: BorderRadius.circular(20.r),
+              child: Column(
+                children: [
+                  Icon(Icons.check_circle, color: Colors.green, size: 60),
+                  SizedBox(height: 12),
+                  Text(message,
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                ],
+              ),
             ),
-          ),
-        );
-      },
+          ],
+        ),
+      ),
     );
+
+    Future.delayed(Duration(seconds: 2), () => Navigator.of(context).pop());
+  }
+
+  Future<void> _deleteChat() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text("Delete Chat"),
+        content: Text(
+            "Are you sure you want to delete this chat? This will remove it from your side only."),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text("Cancel")),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: Text("Delete", style: TextStyle(color: Colors.red))),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await chatController.deleteChat(currentUserId, false);
+      showSuccessAnimation(context, "Chat deleted successfully!");
+      Future.delayed(Duration(seconds: 2), () => Navigator.pop(context));
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        automaticallyImplyLeading: false,
         backgroundColor: AppColors.logocolor,
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
-            IconButton(
-              icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 24.sp),
-              onPressed: () => Navigator.of(context).pop(),
+            InkWell(
+              onTap: () => Navigator.pop(context),
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                height: 35,
+                width: 35,
+                decoration:
+                    BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: Icon(Icons.arrow_back_ios_rounded,
+                    color: AppColors.logocolor, size: 20),
+              ),
             ),
-            GestureDetector(
-              onTap: () => _showAvatarDialog(context),
-              child: CircleAvatar(
-                radius: 16.r,
-                backgroundColor: Colors.grey.shade300, // gray background
-                backgroundImage: (widget.provider.imageUrl.isNotEmpty)
-                    ? NetworkImage(widget.provider.imageUrl)
-                    : null,
-                child: (widget.provider.imageUrl.isEmpty)
-                    ? const Icon(Icons.person, color: Colors.white, size: 20)
-                    : null,
-              )
-
+            SizedBox(width: 12),
+            CircleAvatar(
+              backgroundImage: widget.provider.imageUrl.isNotEmpty
+                  ? NetworkImage(widget.provider.imageUrl)
+                  : AssetImage("assets/images/default.png") as ImageProvider,
             ),
-            SizedBox(width: 10.w),
-            Text(
-              widget.provider.fullName,
-              style: TextStyle(
-                fontSize: 18.sp,
-                fontFamily: 'Urbanist',
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                widget.provider.fullName,
+                style: const TextStyle(
+                    color: Colors.white, fontWeight: FontWeight.w600),
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ],
         ),
+        actions: [
+          Padding(
+            padding: const EdgeInsets.only(right: 12.0),
+            child: InkWell(
+              onTap: _deleteChat,
+              borderRadius: BorderRadius.circular(50),
+              child: Container(
+                height: 35,
+                width: 35,
+                decoration:
+                    BoxDecoration(color: Colors.white, shape: BoxShape.circle),
+                child: Icon(Icons.delete, color: Colors.red, size: 20),
+              ),
+            ),
+          ),
+        ],
       ),
-
       body: Column(
         children: [
-          // Messages list
           Expanded(
             child: Obx(() {
               final msgs = chatController.messages;
-
-              if (msgs.isEmpty) {
-                return Center(
-                  child: Text(
-                    "No messages yet",
-                    style: TextStyle(fontSize: 14.sp, color: Colors.grey),
-                  ),
-                );
-              }
-
+              if (msgs.isEmpty) return Center(child: Text("No messages yet"));
               return ListView.builder(
                 reverse: true,
                 itemCount: msgs.length,
                 itemBuilder: (context, index) {
                   final message = msgs[index];
                   final isMe = message.senderId == currentUserId;
-
                   return Align(
-                    alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                    alignment:
+                        isMe ? Alignment.centerRight : Alignment.centerLeft,
                     child: Container(
-                      margin: EdgeInsets.symmetric(vertical: 4.h, horizontal: 8.w),
-                      padding: EdgeInsets.all(10.w),
+                      margin: EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+                      padding: EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: isMe ? AppColors.logocolor : Colors.grey.shade300,
-                        borderRadius: BorderRadius.circular(12.r),
+                        color:
+                            isMe ? AppColors.logocolor : Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
                         message.text,
                         style: TextStyle(
-                          color: isMe ? Colors.white : Colors.black,
-                          fontSize: 14.sp,
-                          fontFamily: 'Urbanist',
-                        ),
+                            color: isMe ? Colors.white : Colors.black),
                       ),
                     ),
                   );
@@ -152,50 +226,72 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
               );
             }),
           ),
-
-          // Input box
-          CustomContainer(
-            height: 50.h,
+          SizedBox(height: 10.h),
+          Container(
+            padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 4,
+                    offset: Offset(0, -2)),
+              ],
+            ),
             child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _messageController,
-                    decoration: InputDecoration(
-                      hintText: 'Type your message',
-                      hintStyle: TextStyle(
-                        fontSize: 15.sp,
-                        color: Colors.grey,
-                        fontWeight: FontWeight.bold,
-                        fontFamily: 'Urbanist',
+                  child: Container(
+                    padding:
+                        EdgeInsets.symmetric(horizontal: 16.w, vertical: 4.h),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade200,
+                      borderRadius: BorderRadius.circular(30.r),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      style: TextStyle(fontSize: 14.sp),
+                      decoration: InputDecoration(
+                        hintText: "Type a message...",
+                        hintStyle: TextStyle(color: Colors.grey.shade500),
+                        border: InputBorder.none,
                       ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16.0),
                     ),
                   ),
                 ),
-                IconButton(
-                  icon: Icon(Icons.send, color: AppColors.logocolor),
-                  onPressed: () async {
+                SizedBox(width: 10.w),
+                GestureDetector(
+                  onTap: () async {
                     final text = _messageController.text.trim();
                     if (text.isEmpty) return;
-
-                    // ✅ Clear the text field immediately
                     _messageController.clear();
 
-                    // ✅ Then send the message in background
                     await chatController.sendMessage(
                       text: text,
                       senderId: currentUserId,
                       receiverId: widget.provider.id,
-                      senderName: currentUserName,
                       senderImage: currentUserImage,
-                      receiverName: widget.provider.fullName,
                       receiverImage: widget.provider.imageUrl,
+                      senderName: currentUserName,
+                      receiverName: widget.provider.fullName,
                     );
                   },
+                  child: Container(
+                    height: 50.h,
+                    width: 50.h,
+                    decoration: BoxDecoration(
+                      color: AppColors.logocolor,
+                      shape: BoxShape.circle,
+                      boxShadow: [
+                        BoxShadow(
+                            color: AppColors.logocolor.withOpacity(0.5),
+                            blurRadius: 4,
+                            offset: Offset(0, 2)),
+                      ],
+                    ),
+                    child: Icon(Icons.send, color: Colors.white, size: 24.sp),
+                  ),
                 ),
-
               ],
             ),
           ),

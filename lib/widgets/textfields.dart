@@ -1,21 +1,37 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:talk/constants/colors.dart';
+import 'package:talk/constants/colors.dart' hide AppColors;
+
+import 'package:flutter/material.dart';
+
+import '../Constants/colors.dart';
 
 class BackgroundContainer extends StatelessWidget {
   final Widget child;
+  final double width;
+  final double radius;
 
-  const BackgroundContainer({super.key, required this.child});
+  const BackgroundContainer(
+      {super.key,
+        required this.child,
+        required this.width,
+        required this.radius});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: AppColors.bgcolor,
-      width: MediaQuery.of(context).size.width,
+      width: width == 0
+          ? MediaQuery.of(context).size.width
+          : MediaQuery.of(context).size.width / width,
+      decoration: BoxDecoration(
+        color: AppColors.bgcolor,
+        borderRadius: BorderRadius.circular(radius),
+      ),
       child: child,
     );
   }
 }
+
 
 class InputField extends StatelessWidget {
   final String label;

@@ -10,6 +10,8 @@ import 'package:talk/constants/image.dart';
 import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/widgets/textfields.dart';
 
+import 'forget_password.dart';
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -38,18 +40,41 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passwordController.text.trim(),
       );
 
-      // Fetching user data from Firestore
-      DocumentSnapshot userDoc = await _firestore
-          .collection('User')
-          .doc(userCredential.user!.uid)
-          .get();
+      User? user = userCredential.user;
+
+      // ✅ Check if the email is verified
+      if (user != null && !user.emailVerified) {
+        Fluttertoast.showToast(
+          msg: "Please verify your email before logging in.if not exist that you cannot login",
+        );
+
+        // Sign out the unverified user immediately
+        await _auth.signOut();
+
+        setState(() {
+          _isLoading = false;
+        });
+        return; // Stop further execution
+      }
+
+      // ✅ Fetch user data from Firestore
+      DocumentSnapshot userDoc =
+      await _firestore.collection('User').doc(user!.uid).get();
+
+      if (!userDoc.exists) {
+        Fluttertoast.showToast(msg: "User record not found in database.");
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
 
       String userName = userDoc['name']; // Get user's name from Firestore
 
-      // Show success toast
+      // ✅ Show success toast
       Fluttertoast.showToast(msg: 'Welcome, $userName!');
 
-      // Navigate to BottomNavBar screen
+      // ✅ Navigate to BottomNavBar screen
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const BottomNavBar()),
@@ -59,12 +84,13 @@ class _LoginScreenState extends State<LoginScreen> {
       Fluttertoast.showToast(msg: e.message ?? "Login failed");
     } catch (e) {
       Fluttertoast.showToast(msg: "An error occurred. Please try again.");
+    } finally {
+      setState(() {
+        _isLoading = false; // Stop loading
+      });
     }
-
-    setState(() {
-      _isLoading = false; // Stop loading
-    });
   }
+
 
   @override
   Widget build(BuildContext context) {
@@ -74,6 +100,8 @@ class _LoginScreenState extends State<LoginScreen> {
         child: Stack(
           children: [
             BackgroundContainer(
+              width: 0,
+              radius: 0,
               child: Padding(
                 padding: EdgeInsets.only(top: 300.h),
                 child: Padding(
@@ -101,11 +129,20 @@ class _LoginScreenState extends State<LoginScreen> {
                       SizedBox(height: 20.h),
                       Align(
                         alignment: Alignment.bottomRight,
-                        child: Text(
-                          "Forgot Password?",
-                          style: TextStyle(
-                            color: AppColors.logocolor,
-                            fontSize: 15.sp,
+                        child: GestureDetector(
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                  builder: (context) => const ForgetPassword()),
+                            );
+                          },
+                          child: Text(
+                            "Forgot Password?",
+                            style: TextStyle(
+                              color: AppColors.logocolor,
+                              fontSize: 15.sp,
+                            ),
                           ),
                         ),
                       ),

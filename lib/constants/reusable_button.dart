@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 class CustomElevatedButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // 👈 Make this nullable
   final double height;
   final double width;
   final Color backgroundColor;
@@ -12,7 +12,7 @@ class CustomElevatedButton extends StatelessWidget {
   const CustomElevatedButton({
     super.key,
     required this.text,
-    required this.onPressed,
+    required this.onPressed, // can now be null
     this.height = 50.0,
     this.width = 150.0,
     this.backgroundColor = Colors.orange,
@@ -20,19 +20,19 @@ class CustomElevatedButton extends StatelessWidget {
     this.borderRadius = 12.0,
   });
 
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: height,
       width: width,
       child: ElevatedButton(
-        onPressed: onPressed,
+        onPressed: onPressed, // ✅ works with nullable
         style: ElevatedButton.styleFrom(
           foregroundColor: textColor,
-          backgroundColor: backgroundColor, // Text color
+          backgroundColor: backgroundColor,
           shape: RoundedRectangleBorder(
-            borderRadius:
-                BorderRadius.circular(borderRadius), // Rounded corners
+            borderRadius: BorderRadius.circular(borderRadius),
           ),
         ),
         child: Text(text),

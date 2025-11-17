@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
+  final String? id; // add this
   final String senderId;
   final String receiverId;
   final String text;
@@ -11,6 +12,7 @@ class MessageModel {
   final String receiverImage;
 
   MessageModel({
+    this.id, // include in constructor
     required this.senderId,
     required this.receiverId,
     required this.text,
@@ -21,29 +23,29 @@ class MessageModel {
     required this.receiverImage,
   });
 
-  Map<String, dynamic> toMap() {
-    return {
-      "senderId": senderId,
-      "receiverId": receiverId,
-      "text": text,
-      "timestamp": timestamp,
-      "senderName": senderName,
-      "senderImage": senderImage,
-      "receiverName": receiverName,
-      "receiverImage": receiverImage,
-    };
-  }
+  Map<String, dynamic> toMap() => {
+    "senderId": senderId,
+    "receiverId": receiverId,
+    "text": text,
+    "timestamp": timestamp,
+    "senderName": senderName,
+    "senderImage": senderImage,
+    "receiverName": receiverName,
+    "receiverImage": receiverImage,
+  };
 
-  factory MessageModel.fromMap(Map<String, dynamic> map) {
+  factory MessageModel.fromMap(Map<String, dynamic> data, {String? id}) {
     return MessageModel(
-      senderId: map["senderId"] ?? "",
-      receiverId: map["receiverId"] ?? "",
-      text: map["text"] ?? "",
-      timestamp: (map["timestamp"] as Timestamp).toDate(),
-      senderName: map["senderName"] ?? "",
-      senderImage: map["senderImage"] ?? "",
-      receiverName: map["receiverName"] ?? "",
-      receiverImage: map["receiverImage"] ?? "",
+      id: id,
+      senderId: data["senderId"],
+      receiverId: data["receiverId"],
+      text: data["text"],
+      timestamp: (data["timestamp"] as Timestamp).toDate(),
+      senderName: data["senderName"],
+      senderImage: data["senderImage"],
+      receiverName: data["receiverName"],
+      receiverImage: data["receiverImage"],
     );
   }
 }
+

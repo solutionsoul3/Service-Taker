@@ -2,23 +2,25 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-import 'package:talk/Models/ProviderModel.dart';
-import 'package:talk/constants/colors.dart';
+import 'package:get/get.dart';
 
-import '../../Views/ChatScreen/chattingscreenwithuser.dart';
+import '../../Constants/colors.dart';
+import '../../Models/ProviderModel.dart';
+import 'chattingscreenwithuser.dart';
 
 class ChatScreen extends StatelessWidget {
-  const ChatScreen({super.key});
+  final bool isProvider; // true if current user is a provider
+  const ChatScreen({super.key, this.isProvider = false});
 
   @override
   Widget build(BuildContext context) {
     final currentUserId = FirebaseAuth.instance.currentUser!.uid;
+    final collection = isProvider ? "Provider" : "User";
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AppColors.logocolor,
         elevation: 0,
-
         centerTitle: true,
         automaticallyImplyLeading: false,
         title: Text(
@@ -30,21 +32,21 @@ class ChatScreen extends StatelessWidget {
             fontWeight: FontWeight.bold,
           ),
         ),
-
       ),
 
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
-            .collection("chat_rooms")
-            .where("participants", arrayContains: currentUserId)
+            .collection(collection)
+            .doc(currentUserId)
+            .collection("chats")
+            .orderBy("lastMessageTime", descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
 
-          var rooms = snapshot.data!.docs;
-
+          final rooms = snapshot.data!.docs;
           if (rooms.isEmpty) {
             return const Center(child: Text("No chats yet"));
           }
@@ -52,59 +54,58 @@ class ChatScreen extends StatelessWidget {
           return ListView.builder(
             itemCount: rooms.length,
             itemBuilder: (context, index) {
-              var room = rooms[index].data() as Map<String, dynamic>;
+              final room = rooms[index].data() as Map<String, dynamic>?;
 
-              // ✅ Get other participant
-              List participants = room["participants"];
-              String receiverId = participants.firstWhere((id) => id != currentUserId);
+              if (room == null) return const SizedBox();
 
-              String userName = room["names"]?[receiverId] ?? "Unknown";
-              String userImage = room["images"]?[receiverId] ?? "https://via.placeholder.com/150";
+              final participants = (room["participants"] as List<dynamic>?) ?? [];
+              if (participants.isEmpty) return const SizedBox();
 
-              // ✅ Create ProviderModel object to pass
+              // Get the other participant safely
+              final receiverId = participants.firstWhere(
+                    (id) => id != currentUserId,
+                orElse: () => null,
+              );
+
+              if (receiverId == null) return const SizedBox();
+
+              final names = room["names"] as Map<String, dynamic>? ?? {};
+              final images = room["images"] as Map<String, dynamic>? ?? {};
+
+              final receiverName = names[receiverId] ?? "Unknown";
+              final receiverImage = images[receiverId] ?? "https://via.placeholder.com/150";
+
               final provider = ProviderModel(
                 id: receiverId,
-                fullName: userName,
-                imageUrl: userImage,
+                fullName: receiverName,
+                imageUrl: receiverImage,
               );
+
+              final lastMessage = room["lastMessage"] ?? "";
+              final lastTime = room["lastMessageTime"] != null
+                  ? (room["lastMessageTime"] is Timestamp
+                  ? (room["lastMessageTime"] as Timestamp).toDate()
+                  : DateTime.tryParse(room["lastMessageTime"].toString()))
+                  : null;
+
+              final timeText = lastTime != null
+                  ? "${lastTime.year}-${lastTime.month.toString().padLeft(2,'0')}-${lastTime.day.toString().padLeft(2,'0')}"
+                  : "";
 
               return ListTile(
                 leading: CircleAvatar(
                   radius: 25,
-                  backgroundColor: Colors.grey,
-                  child: ClipOval(
-                    child: userImage.isNotEmpty
-                        ? Image.network(
-                      userImage,
-                      fit: BoxFit.cover,
-                      width: 50,
-                      height: 50,
-                      errorBuilder: (context, error, stackTrace) => const Icon(
-                        Icons.person,
-                        color: Colors.white,
-                        size: 26,
-                      ),
-                    )
-                        : const Icon(
-                      Icons.person,
-                      color: Colors.white,
-                      size: 26,
-                    ),
-                  ),
+                  backgroundColor: Colors.grey.shade300,
+                  backgroundImage: receiverImage.isNotEmpty
+                      ? NetworkImage(receiverImage)
+                      : null,
+                  child: receiverImage.isEmpty
+                      ? const Icon(Icons.person, color: Colors.white)
+                      : null,
                 ),
-                title: Text(userName, style: TextStyle(color: AppColors.logocolor)),
-                subtitle: Text(room["lastMessage"] ?? ""),
-                trailing: Text(
-                  room["lastMessageTime"] != null
-                      ? (room["lastMessageTime"] is Timestamp
-                      ? (room["lastMessageTime"] as Timestamp)
-                      .toDate()
-                      .toString()
-                      .substring(0, 10)
-                      : room["lastMessageTime"].toString().substring(0, 10))
-                      : "",
-                  style: TextStyle(color: Colors.grey, fontSize: 12.sp),
-                ),
+                title: Text(receiverName, style: TextStyle(color: AppColors.logocolor)),
+                subtitle: Text(lastMessage, maxLines: 1, overflow: TextOverflow.ellipsis),
+                trailing: Text(timeText, style: TextStyle(color: Colors.grey, fontSize: 12.sp)),
                 onTap: () {
                   Navigator.push(
                     context,

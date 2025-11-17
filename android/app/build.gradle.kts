@@ -10,12 +10,14 @@ plugins {
 
 android {
     namespace = "com.example.talk"
-    compileSdk = 35
+    compileSdk = 36
     ndkVersion = "27.0.12077973"
 
     compileOptions {
+        // ✅ Enable core library desugaring
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlinOptions {
@@ -34,11 +36,8 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.getByName("debug")
-
-            // ✅ Kotlin DSL syntax
             isMinifyEnabled = true
             isShrinkResources = true
-
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -53,4 +52,7 @@ flutter {
 
 dependencies {
     implementation("androidx.multidex:multidex:2.0.1")
+
+    // ✅ Add this line — required for flutter_local_notifications
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }

@@ -23,6 +23,10 @@ class _HomeScreenState extends State<HomeScreen> {
   final UserController _userController = UserController();
   UserModel? currentUser;
 
+  String searchQuery = ""; // 🔍 Search text
+
+  final TextEditingController _searchController = TextEditingController();
+
   static const _carouselImages = [
     AppImages.plumber,
     AppImages.handman,
@@ -48,8 +52,8 @@ class _HomeScreenState extends State<HomeScreen> {
 
   static const _popularServices = [
     {"catename": "Electrician", "imageURL": "assets/images/services/electricain.jpeg"},
-    {"catename": "Mechanic", "imageURL": "assets/images/services/plumber.jpeg"},
-    {"catename": "Painter", "imageURL": "assets/images/services/handyman.jpeg"},
+    {"catename": "Mechanic", "imageURL": "assets/images/services/mechanic.jpg"},
+    {"catename": "Painter", "imageURL": "assets/images/services/painter.jpg"},
     {
       "catename": "Internet Provider",
       "imageURL": "assets/images/services/construction.jpeg"
@@ -69,6 +73,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredCategories = _categories
+        .where((item) =>
+        item["catename"]!.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+
+    final filteredPopular = _popularServices
+        .where((item) =>
+        item["catename"]!.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.bgcolor,
@@ -80,37 +94,109 @@ class _HomeScreenState extends State<HomeScreen> {
             _Header(
               scaffoldKey: _scaffoldKey,
               currentUser: currentUser,
+              searchController: _searchController,
+              onSearch: (value) {
+                setState(() => searchQuery = value);
+              },
             ),
+
+            /// ---- CAROUSEL ----
             SizedBox(height: 20.h),
             ImageCarousel(imagePaths: _carouselImages, height: 240.h),
             SizedBox(height: 15.h),
-            SectionTitle(title: 'Categories', actionText: 'See all'),
-            SizedBox(height: 8.h),
-            SizedBox(
-              height: 110.h,
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 15.w),
-                scrollDirection: Axis.horizontal,
-                itemCount: _categories.length,
-                itemBuilder: (_, i) => CategoryItem(category: _categories[i]),
+
+            /// ---- SEARCH RESULTS ----
+            if (searchQuery.isNotEmpty) ...[
+              SectionTitle(title: "Search Results", actionText: ""),
+              SizedBox(height: 10.h),
+
+              if (filteredCategories.isEmpty && filteredPopular.isEmpty)
+                Center(
+                    child: Text("No results found",
+                        style: TextStyle(fontSize: 16.sp))),
+
+              /// Filtered Categories
+              if (filteredCategories.isNotEmpty) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  child: Text("Categories",
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                ),
+                SizedBox(height: 10.h),
+                SizedBox(
+                  height: 110.h,
+                  child: ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 15.w),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: filteredCategories.length,
+                    itemBuilder: (_, i) =>
+                        CategoryItem(category: filteredCategories[i]),
+                  ),
+                ),
+              ],
+
+              /// Filtered Popular Services
+              if (filteredPopular.isNotEmpty) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  child: Text("Popular Services",
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                ),
+                SizedBox(height: 10.h),
+                SizedBox(
+                  height: 210.h,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: 15.w),
+                    itemCount: filteredPopular.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 16.w),
+                    itemBuilder: (_, i) {
+                      final category =
+                      filteredPopular[i] as Map<String, dynamic>;
+                      return PopularServiceCard(category: category);
+                    },
+                  ),
+                ),
+              ],
+
+              SizedBox(height: 30.h),
+            ]
+            else ...[
+              /// ---- ORIGINAL CATEGORIES ----
+              SectionTitle(title: 'Categories', actionText: 'See all'),
+              SizedBox(height: 8.h),
+              SizedBox(
+                height: 110.h,
+                child: ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _categories.length,
+                  itemBuilder: (_, i) =>
+                      CategoryItem(category: _categories[i]),
+                ),
               ),
-            ),
-            SizedBox(height: 15.h),
-            SectionTitle(title: 'Popular Services', actionText: 'View all'),
-            SizedBox(height: 16.h),
-            SizedBox(
-              height: 210.h,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: 15.w),
-                itemCount: _popularServices.length,
-                separatorBuilder: (_, __) => SizedBox(width: 16.w),
-                itemBuilder: (_, i) {
-                  final category = _popularServices[i] as Map<String, dynamic>;
-                  return PopularServiceCard(category: category);
-                },
+              SizedBox(height: 15.h),
+
+              /// ---- ORIGINAL POPULAR SERVICES ----
+              SectionTitle(title: 'Popular Services', actionText: 'View all'),
+              SizedBox(height: 16.h),
+              SizedBox(
+                height: 210.h,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  itemCount: _popularServices.length,
+                  separatorBuilder: (_, __) => SizedBox(width: 16.w),
+                  itemBuilder: (_, i) {
+                    final category =
+                    _popularServices[i] as Map<String, dynamic>;
+                    return PopularServiceCard(category: category);
+                  },
+                ),
               ),
-            )
+            ],
           ],
         ),
       ),
@@ -118,12 +204,23 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// ================= HEADER =================
+//////////////////////////////////////////////////////////////////
+/// ================= HEADER WITH SEARCH =========================
+//////////////////////////////////////////////////////////////////
+
 class _Header extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final UserModel? currentUser;
 
-  const _Header({required this.scaffoldKey, required this.currentUser});
+  final TextEditingController searchController;
+  final Function(String) onSearch;
+
+  const _Header({
+    required this.scaffoldKey,
+    required this.currentUser,
+    required this.searchController,
+    required this.onSearch,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -151,21 +248,15 @@ class _Header extends StatelessWidget {
   }
 
   Widget _topBar(BuildContext context) => Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white, size: 28),
-            onPressed: () => scaffoldKey.currentState?.openDrawer(),
-          ),
-          // GestureDetector(
-          //   onTap: () => Navigator.push(
-          //     context,
-          //     MaterialPageRoute(builder: (_) => const NotificationScreen()),
-          //   ),
-          //   child: const Icon(Icons.notifications, color: Colors.white, size: 28),
-          // )
-        ],
-      );
+    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+    children: [
+      IconButton(
+        icon: const Icon(Icons.menu, color: Colors.white, size: 28),
+        onPressed: () => scaffoldKey.currentState?.openDrawer(),
+      ),
+    ],
+  );
+
   Widget _userInfo() {
     return Row(
       children: [
@@ -176,7 +267,8 @@ class _Header extends StatelessWidget {
               currentUser!.imageUrl!.isNotEmpty)
               ? NetworkImage(currentUser!.imageUrl!)
               : null,
-          child: (currentUser?.imageUrl == null || currentUser!.imageUrl!.isEmpty)
+          child: (currentUser?.imageUrl == null ||
+              currentUser!.imageUrl!.isEmpty)
               ? const Icon(Icons.person, color: Colors.white, size: 28)
               : null,
         ),
@@ -207,32 +299,33 @@ class _Header extends StatelessWidget {
   }
 
   Widget _searchBar() => Container(
-        height: 40.h,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(30.r),
-        ),
-        child: Row(
-          children: [
-            SizedBox(width: 14.w),
-            const Icon(Icons.search, color: AppColors.logocolor),
-            SizedBox(width: 6.w),
-            Expanded(
-              child: TextField(
-                textAlignVertical:
-                    TextAlignVertical.center, // ✅ Centers text vertically
-                decoration: InputDecoration(
-                  isCollapsed: true, // ✅ Removes default padding
-                  contentPadding: EdgeInsets.zero, // ✅ Ensures full centering
-                  hintText: "Search services...",
-                  hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey),
-                  border: InputBorder.none,
-                ),
-              ),
+    height: 40.h,
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(30.r),
+    ),
+    child: Row(
+      children: [
+        SizedBox(width: 14.w),
+        const Icon(Icons.search, color: AppColors.logocolor),
+        SizedBox(width: 6.w),
+        Expanded(
+          child: TextField(
+            controller: searchController,
+            onChanged: onSearch,
+            textAlignVertical: TextAlignVertical.center,
+            decoration: InputDecoration(
+              isCollapsed: true,
+              contentPadding: EdgeInsets.zero,
+              hintText: "Search services...",
+              hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey),
+              border: InputBorder.none,
             ),
-            const Icon(Icons.filter_alt_outlined, color: AppColors.logocolor),
-            SizedBox(width: 14.w),
-          ],
+          ),
         ),
-      );
+        const Icon(Icons.filter_alt_outlined, color: AppColors.logocolor),
+        SizedBox(width: 14.w),
+      ],
+    ),
+  );
 }

@@ -49,46 +49,44 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      // Create user in Firebase Auth
+      // Create the user in Firebase Authentication
       UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
+      await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Get user UID
-      String uid = userCredential.user!.uid;
+      User? user = userCredential.user;
 
-      // Initialize a variable for the image URL
-      String? imageUrl;
+      // Send verification email
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
 
-      if (_selectedImage != null) {
-        // Upload image to Firebase Storage
-        final storageRef =
-            FirebaseStorage.instance.ref().child('user_images/$uid.jpg');
-        UploadTask uploadTask = storageRef.putFile(_selectedImage!);
+        Fluttertoast.showToast(
+          msg: "Verification email sent! Please check your inbox.",
+        );
 
-        TaskSnapshot snapshot = await uploadTask.whenComplete(() => {});
-        imageUrl = await snapshot.ref.getDownloadURL();
+        // Save user info in Firestore temporarily
+        await _firestore.collection('User').doc(user.uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'uid': user.uid,
+          'imageUrl': null,
+          'location': _addressController.text,
+          'latitude': _selectedLat,
+          'longitude': _selectedLng,
+          'isVerified': false, // track verification status
+        });
+
+        // Sign out so unverified users can’t access app
+        await _auth.signOut();
+
+        // Go to login screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
       }
-
-      await _firestore.collection('User').doc(uid).set({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        // 'phoneNumber': _phoneNumber,
-        'uid': uid,
-        'imageUrl': imageUrl,
-        'location': _addressController.text,
-        'latitude': _selectedLat,
-        'longitude': _selectedLng,
-      });
-
-      Fluttertoast.showToast(msg: "Account created successfully!");
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
     } on FirebaseAuthException catch (e) {
       Fluttertoast.showToast(msg: e.message ?? "Failed to create account");
     } finally {
@@ -97,6 +95,7 @@ class _SignupScreenState extends State<SignupScreen> {
       });
     }
   }
+
 
   Future<void> _selectLocationFromMap(BuildContext context) async {
     final result = await Navigator.push(
@@ -121,6 +120,8 @@ class _SignupScreenState extends State<SignupScreen> {
         child: Stack(
           children: [
             BackgroundContainer(
+              width: 0,
+              radius: 0,
               child: Padding(
                 padding: EdgeInsets.only(top: 300.h),
                 child: Padding(

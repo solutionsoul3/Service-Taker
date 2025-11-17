@@ -1,20 +1,20 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:get/get.dart';
-import 'package:get/get_state_manager/src/simple/get_controllers.dart';
-
 import '../Models/MessageModel.dart';
 import '../Services/chat_service.dart';
+import '../Services/notification_service.dart';
 
 class ChatController extends GetxController {
   final ChatService _chatService = ChatService();
   var messages = <MessageModel>[].obs;
+  var chatRoomId = "".obs;
 
-  var chatRoomId = "".obs; // ✅ safe, starts with empty string
-
-  void initChat(String userId, String providerId) {
-    chatRoomId.value = _chatService.getChatRoomId(userId, providerId);
-    messages.bindStream(_chatService.getMessages(chatRoomId.value));
+  /// Initialize chat: true if provider, false if user
+  void initChat(String currentUserId, String otherUserId, bool isProvider) {
+    chatRoomId.value = _chatService.getChatRoomId(currentUserId, otherUserId);
+    messages.bindStream(_chatService.getMessages(currentUserId, chatRoomId.value, isProvider));
   }
-
+  /// Send message
   Future<void> sendMessage({
     required String text,
     required String senderId,
@@ -37,6 +37,41 @@ class ChatController extends GetxController {
       receiverImage: receiverImage,
     );
 
+    // Detect if sender is provider or user
+    final isProvider = await _isProvider(senderId);
+
+    // Send message
     await _chatService.sendMessage(message, chatRoomId.value);
+
+    // Send push notification
+    String? receiverToken;
+    for (final collection in ['User', 'Provider']) {
+      final doc = await FirebaseFirestore.instance.collection(collection).doc(receiverId).get();
+      final token = doc.data()?['fcmToken'];
+      if (doc.exists && token != null && token is String && token.isNotEmpty) {
+        receiverToken = token;
+        break;
+      }
+    }
+
+    if (receiverToken != null && receiverId != senderId) {
+      await NotificationService.sendPushNotification(
+        token: receiverToken,
+        title: senderName,
+        body: text,
+      );
+    }
+  }
+
+  Future<bool> _isProvider(String uid) async {
+    final doc = await FirebaseFirestore.instance.collection("Provider").doc(uid).get();
+    return doc.exists;
+  }
+
+  /// Delete chat
+  Future<void> deleteChat(String currentUserId, bool isProvider) async {
+    if (chatRoomId.value.isEmpty) return;
+    await _chatService.deleteChat(currentUserId, chatRoomId.value, isProvider);
+    messages.clear();
   }
 }

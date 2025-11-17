@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lottie/lottie.dart' hide Marker;
 import 'package:talk/Models/ProviderModel.dart';
@@ -10,6 +11,8 @@ import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/widgets/reusableboxdecoration.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../Services/call_service.dart';
 
 class ProviderDetailsScreen extends StatefulWidget {
   final ProviderModel provider;
@@ -35,6 +38,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     );
   }
 
+  double? _distanceInKm;
   bool isFavorited = false;
   String? currentUserId;
   int reviewCount = 0;
@@ -48,10 +52,41 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   void initState() {
     super.initState();
     currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    _checkIfFavorited();
+
     _fetchReviewCount();
     _fetchImages();
     _fetchUserRating();
+    _calculateDistance();
+  }
+
+  Future<void> _calculateDistance() async {
+    try {
+      // Request permission
+      LocationPermission permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return;
+      }
+
+      // Get current user position
+      Position position = await Geolocator.getCurrentPosition(
+          desiredAccuracy: LocationAccuracy.high);
+
+      // Calculate distance in meters
+      double distanceInMeters = Geolocator.distanceBetween(
+        position.latitude,
+        position.longitude,
+        widget.provider.latitude,
+        widget.provider.longitude,
+      );
+
+      // Convert to km
+      setState(() {
+        _distanceInKm = distanceInMeters / 1000;
+      });
+    } catch (e) {
+      debugPrint('Error calculating distance: $e');
+    }
   }
 
   Future<void> _fetchImages() async {
@@ -169,8 +204,6 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     }
   }
 
-
-
   Widget _buildStarRating() {
     List<Widget> stars = [];
 
@@ -192,15 +225,14 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
     return Row(children: stars);
   }
 
-
-
   void _showThankYouPopup(String providerName) {
     showDialog(
       context: context,
       barrierDismissible: false,
       builder: (BuildContext context) {
         return Dialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
           child: Padding(
             padding: const EdgeInsets.all(20),
             child: Column(
@@ -245,98 +277,6 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
       return '3';
     }
     return '0';
-  }
-
-  void _checkIfFavorited() async {
-    if (currentUserId != null) {
-      final userDoc =
-          FirebaseFirestore.instance.collection('User').doc(currentUserId);
-      final favoritesSnapshot = await userDoc
-          .collection('Myfav')
-          .where('providerId', isEqualTo: widget.provider.id)
-          .get();
-
-      setState(() {
-        isFavorited = favoritesSnapshot.docs.isNotEmpty;
-      });
-    }
-  }
-
-  Future<void> _toggleFavorite() async {
-    if (currentUserId != null) {
-      final userDoc =
-          FirebaseFirestore.instance.collection('User').doc(currentUserId);
-
-      if (isFavorited) {
-        // Remove from favorites
-        await userDoc.collection('Myfav').doc(widget.provider.id).delete();
-        setState(() {
-          isFavorited = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Removed from favorites!',
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: 'Urbanist',
-              ),
-            ),
-            backgroundColor: Colors.red,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      } else {
-        // Add to favorites
-        String ratingValue = _getRatingValue(reviewCount);
-        await userDoc.collection('Myfav').doc(widget.provider.id).set({
-          'providerId': widget.provider.id,
-          'price': widget.provider.pricePerHour,
-          'providerName': widget.provider.fullName,
-          'imageUrl': widget.provider.imageUrl,
-          'description': widget.provider.description,
-          'email': widget.provider.email,
-          'experience': widget.provider.experience,
-          'experience Description': widget.provider.experienceDescription,
-          'service': widget.provider.service,
-          'contact Number': widget.provider.contactNumber,
-          'location': widget.provider.location,
-          'rating': ratingValue,
-
-          // Add other relevant fields if necessary
-        });
-        setState(() {
-          isFavorited = true;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: const Text(
-              'Added to favorites!',
-              style: TextStyle(
-                color: Colors.white,
-                fontFamily: 'Urbanist',
-              ),
-            ),
-            backgroundColor: Colors.lightGreen,
-            behavior: SnackBarBehavior.floating,
-            margin: const EdgeInsets.all(16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(10),
-            ),
-            duration: const Duration(seconds: 4),
-          ),
-        );
-      }
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('User not logged in!')),
-      );
-    }
   }
 
   Widget _buildBackgroundContainer(BuildContext context) {
@@ -407,8 +347,8 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-
-                  if (widget.provider.latitude != 0.0 && widget.provider.longitude != 0.0)
+                  if (widget.provider.latitude != 0.0 &&
+                      widget.provider.longitude != 0.0)
                     ClipRRect(
                       borderRadius: BorderRadius.circular(10.r),
                       child: SizedBox(
@@ -416,16 +356,17 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                         width: double.infinity,
                         child: GoogleMap(
                           initialCameraPosition: CameraPosition(
-                            target: LatLng(
-                                widget.provider.latitude, widget.provider.longitude),
+                            target: LatLng(widget.provider.latitude,
+                                widget.provider.longitude),
                             zoom: 14.5,
                           ),
                           markers: {
                             Marker(
                               markerId: MarkerId(widget.provider.id),
-                              position: LatLng(
-                                  widget.provider.latitude, widget.provider.longitude),
-                              infoWindow: InfoWindow(title: widget.provider.fullName),
+                              position: LatLng(widget.provider.latitude,
+                                  widget.provider.longitude),
+                              infoWindow:
+                                  InfoWindow(title: widget.provider.fullName),
                             ),
                           },
                           zoomControlsEnabled: false,
@@ -437,140 +378,151 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                     ),
                   SizedBox(height: 10.h),
                   Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 10.h),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 20.w,
+                    ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
-                          child: Text(
-                            widget.provider.location,
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              fontSize: 14.sp,
-                              color: Colors.black,
-                              fontFamily: 'Urbanist',
-                              fontWeight: FontWeight.bold,
-                            ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                widget.provider.location,
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  fontSize: 14.sp,
+                                  color: Colors.black,
+                                  fontFamily: 'Urbanist',
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              if (_distanceInKm != null)
+                                Text(
+                                  '${_distanceInKm!.toStringAsFixed(2)} km away',
+                                  style: TextStyle(
+                                    fontSize: 12.sp,
+                                    color: AppColors.appcolor,
+                                    fontFamily: 'Urbanist',
+                                  ),
+                                ),
+                            ],
                           ),
                         ),
-                        const Icon(Icons.location_on, color: AppColors.logocolor),
+                        const Icon(Icons.location_on,
+                            color: AppColors.logocolor),
+                      ],
+                    ),
+                  ),
+                  ReusableBoxDecoration(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Description',
+                          style: reusableTextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const Divider(),
+                        Text(
+                          widget.provider.description,
+                          style: reusableTextStyle(
+                            fontSize: 13.sp,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ],
                     ),
                   ),
                   SizedBox(height: 10.h),
-                ],
-              ),
-            ),
-
-            SizedBox(
-              height: 20.h,
-            ),
-            ReusableBoxDecoration(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Description',
-                    style: reusableTextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Divider(),
-                  Text(
-                    widget.provider.description,
-                    style: reusableTextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 10.h),
-            ReusableBoxDecoration(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Availability',
-                    style: reusableTextStyle(
-                      fontSize: 16.sp,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const Divider(),
-                  Column(
-                    children: widget.provider.availability.map((availability) {
-                      return Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            availability.day,
-                            style: reusableTextStyle(
-                              fontSize: 14.sp,
-                              fontWeight: FontWeight.bold,
-                            ),
+                  ReusableBoxDecoration(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Availability',
+                          style: reusableTextStyle(
+                            fontSize: 16.sp,
+                            fontWeight: FontWeight.bold,
                           ),
-                          SizedBox(width: 10.w),
-                          Text(
-                            '${availability.startTime} - ${availability.endTime}',
-                            style: reusableTextStyle(
-                              fontSize: 14.sp,
-                              color: AppColors.logocolor,
-                            ),
-                          ),
-                        ],
-                      );
-                    }).toList(),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(
-              height: 10.h,
-            ),
-            ReusableBoxDecoration(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Experience',
-                        style: reusableTextStyle(
-                          fontSize: 16.sp,
-                          fontWeight: FontWeight.bold,
                         ),
-                      ),
-                      Text(
-                        '${widget.provider.experience} year',
-                        style: reusableTextStyle(
-                          fontSize: 14.sp,
-                          color: AppColors.logocolor,
-                          fontWeight: FontWeight.bold,
+                        const Divider(),
+                        Column(
+                          children:
+                              widget.provider.availability.map((availability) {
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  availability.day,
+                                  style: reusableTextStyle(
+                                    fontSize: 14.sp,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(width: 10.w),
+                                Text(
+                                  '${availability.startTime} - ${availability.endTime}',
+                                  style: reusableTextStyle(
+                                    fontSize: 14.sp,
+                                    color: AppColors.logocolor,
+                                  ),
+                                ),
+                              ],
+                            );
+                          }).toList(),
                         ),
-                      ),
-                    ],
-                  ),
-                  const Divider(),
-                  Text(
-                    widget.provider.experienceDescription,
-                    style: reusableTextStyle(
-                      fontSize: 13.sp,
-                      color: Colors.grey,
+                      ],
                     ),
                   ),
+                  SizedBox(
+                    height: 10.h,
+                  ),
+                  ReusableBoxDecoration(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Experience',
+                              style: reusableTextStyle(
+                                fontSize: 16.sp,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '${widget.provider.experience} year',
+                              style: reusableTextStyle(
+                                fontSize: 14.sp,
+                                color: AppColors.logocolor,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Divider(),
+                        Text(
+                          widget.provider.experienceDescription,
+                          style: reusableTextStyle(
+                            fontSize: 13.sp,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 50.h,
+                  ),
                 ],
               ),
             ),
-
-            SizedBox(
-              height: 50.h,
-            ),
-
           ],
         ),
       ),
@@ -681,16 +633,16 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                   ),
                   Container(
                     height: 35.h,
-                    width: 50.w,
+                    width: 90.w,
                     decoration: BoxDecoration(
                       color: const Color.fromARGB(255, 209, 208, 208),
                       borderRadius: BorderRadius.circular(10.r),
                     ),
                     child: Center(
                       child: Text(
-                        _getRatingValue(reviewCount),
+                        '\ksh${widget.provider.pricePerHour.toString()}',
                         style: TextStyle(
-                          fontSize: 13.sp,
+                          fontSize: 15.sp,
                           color: Colors.black,
                           fontWeight: FontWeight.bold,
                           fontFamily: 'Urbanist',
@@ -703,34 +655,17 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
               SizedBox(height: 10.h),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildStarRating(),
-                  const Spacer(),
-                  GestureDetector(
-                    onTap: () {
-                    },
-                    child: Text(
-                      'Reviews($reviewCount)',
-                      style: TextStyle(
-                        fontSize: 14.sp,
-                        color: Colors.grey,
-                        fontFamily: 'Urbanist',
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
                   Text(
-                    '\$${widget.provider.pricePerHour.toString()}',
+                    'Reviews ($reviewCount)',
                     style: TextStyle(
-                      fontSize: 15.sp,
-                      color: AppColors.logocolor,
-                      fontWeight: FontWeight.bold,
+                      fontSize: 14.sp,
+                      color: Colors.grey,
                       fontFamily: 'Urbanist',
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
-                  const Spacer(),
                 ],
               ),
             ],
@@ -741,91 +676,81 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   }
 }
 
-Widget _buildIconContainer(
-    BuildContext context, IconData icon, String tooltip, ProviderModel provider) {
+Widget _buildIconContainer(BuildContext context, IconData icon, String tooltip,
+    ProviderModel provider) {
   return Container(
-    width: 40.w,
-    height: 40.h,
-    decoration: BoxDecoration(
-      color: AppColors.logocolor,
-      borderRadius: BorderRadius.circular(10),
-    ),
-    child: IconButton(
-      onPressed: () async {
-        if (icon == Icons.mail) {
-          // ✅ Navigate to chat screen
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ChatWithProvider(provider: provider,),
-            ),
-          );
-        } else if (icon == Icons.call) {
-          // ✅ Fetch provider's contact number
-          final String contactNumber = provider.contactNumber.isNotEmpty
-              ? provider.contactNumber
-              : "N/A";
-
-          if (contactNumber == "N/A") {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("No contact number available")),
+      width: 40.w,
+      height: 40.h,
+      decoration: BoxDecoration(
+        color: AppColors.logocolor,
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: IconButton(
+        onPressed: () async {
+          if (icon == Icons.mail) {
+            // ✅ Navigate to chat screen
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    ChatWithProvider(
+                      provider: provider,
+                    ),
+              ),
             );
-            return;
           }
+          if (icon == Icons.call) {
+            final String contactNumber = provider.contactNumber.isNotEmpty
+                ? provider.contactNumber
+                : "N/A";
 
-          final Uri callUri = Uri.parse("tel:$contactNumber");
+            if (contactNumber == "N/A") {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("No contact number available")),
+              );
+              return;
+            }
 
-          // ✅ Save call record in Firestore before making the call
-          final currentUser = FirebaseAuth.instance.currentUser;
-          if (currentUser != null) {
-            // 🔹 Fetch User Profile from Firestore (NOT FirebaseAuth)
-            final userDoc = await FirebaseFirestore.instance
-                .collection("User")
-                .doc(currentUser.uid)
-                .get();
+            final Uri callUri = Uri.parse("tel:$contactNumber");
+            final currentUser = FirebaseAuth.instance.currentUser;
 
-            if (userDoc.exists) {
-              final userData = userDoc.data() ?? {};
+            if (currentUser != null) {
+              final userDoc = await FirebaseFirestore.instance
+                  .collection("User")
+                  .doc(currentUser.uid)
+                  .get();
 
-              final callerName = userData["name"] ?? "Unknown User";
-              final callerImage =
-                  userData["imageUrl"] ?? "https://via.placeholder.com/150";
-              final callerPhoneNumber = userData["phoneNumber"] ?? "Unknown";
+              if (userDoc.exists) {
+                final userData = userDoc.data() ?? {};
+                final callerName = userData["name"] ?? "Unknown User";
+                final callerImage =
+                    userData["imageUrl"] ?? "https://via.placeholder.com/150";
+                final callerPhoneNumber = userData["phoneNumber"] ?? "Unknown";
 
-              await FirebaseFirestore.instance.collection("calls").add({
-                "callerId": currentUser.uid,
-                "callerName": callerName,
-                "callerImage": callerImage,
-                "callerPhoneNumber": callerPhoneNumber, // ✅ caller number
+                // ✅ Save logs
+                await logCall(
+                  callerId: currentUser.uid,
+                  callerName: callerName,
+                  callerImage: callerImage,
+                  callerPhoneNumber: callerPhoneNumber,
+                  receiverId: provider.id,
+                  receiverName: provider.fullName,
+                  receiverImage: provider.imageUrl,
+                  receiverPhoneNumber: provider.contactNumber,
+                );
+              }
+            }
 
-                "receiverId": provider.id,
-                "receiverName": provider.fullName,
-                "receiverImage": provider.imageUrl,
-                "receiverContactNumber": contactNumber, // ✅ receiver number
-
-                "participants": [currentUser.uid, provider.id],
-                "timestamp": FieldValue.serverTimestamp(),
-                "type": "outgoing",
-              });
+            if (await canLaunchUrl(callUri)) {
+              await launchUrl(callUri, mode: LaunchMode.externalApplication);
+            } else {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Could not launch dialer")),
+              );
             }
           }
-
-          // ✅ Launch phone dialer
-          if (await canLaunchUrl(callUri)) {
-            await launchUrl(callUri, mode: LaunchMode.externalApplication);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text("Could not launch dialer")),
-            );
-          }
-        }
-      },
-      icon: Icon(icon, color: Colors.white, size: 22),
-      tooltip: tooltip,
-    )
-
-  );
+        },
+        icon: Icon(icon, color: Colors.white, size: 22),
+        tooltip: tooltip,
+      ));
 }
-
-
-
