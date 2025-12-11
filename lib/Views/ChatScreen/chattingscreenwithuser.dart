@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:get/get.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../Controller/chat-controller.dart';
 import '../../Models/ProviderModel.dart';
 import '../../Services/notification_service.dart';
@@ -146,18 +147,6 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
         automaticallyImplyLeading: false,
         title: Row(
           children: [
-            InkWell(
-              onTap: () => Navigator.pop(context),
-              borderRadius: BorderRadius.circular(50),
-              child: Container(
-                height: 35,
-                width: 35,
-                decoration:
-                    BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: Icon(Icons.arrow_back_ios_rounded,
-                    color: AppColors.logocolor, size: 20),
-              ),
-            ),
             SizedBox(width: 12),
             CircleAvatar(
               backgroundImage: widget.provider.imageUrl.isNotEmpty
@@ -177,21 +166,61 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
         ),
         actions: [
           Padding(
-            padding: const EdgeInsets.only(right: 12.0),
-            child: InkWell(
-              onTap: _deleteChat,
-              borderRadius: BorderRadius.circular(50),
-              child: Container(
-                height: 35,
-                width: 35,
-                decoration:
-                    BoxDecoration(color: Colors.white, shape: BoxShape.circle),
-                child: Icon(Icons.delete, color: Colors.red, size: 20),
-              ),
+            padding: const EdgeInsets.only(right: 8.0),
+            child: Row(
+              children: [
+                // Call Icon
+                InkWell(
+                  onTap: () async {
+                    final String contactNumber = widget.provider.contactNumber.isNotEmpty
+                        ? widget.provider.contactNumber
+                        : "N/A";
+
+                    if (contactNumber == "N/A") {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("No contact number available")),
+                      );
+                      return;
+                    }
+
+                    final Uri callUri = Uri.parse("tel:$contactNumber");
+                    if (await canLaunchUrl(callUri)) {
+                      await launchUrl(callUri, mode: LaunchMode.externalApplication);
+                    } else {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Could not launch dialer")),
+                      );
+                    }
+                  },
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                    height: 35,
+                    width: 35,
+                    decoration: BoxDecoration(
+                        color: Colors.white, shape: BoxShape.circle),
+                    child: Icon(Icons.call, color: AppColors.logocolor, size: 20),
+                  ),
+                ),
+                SizedBox(width: 8),
+                // Delete Icon
+                InkWell(
+                  onTap: _deleteChat,
+                  borderRadius: BorderRadius.circular(50),
+                  child: Container(
+                    height: 35,
+                    width: 35,
+                    decoration: BoxDecoration(
+                        color: Colors.white, shape: BoxShape.circle),
+                    child: Icon(Icons.delete, color: Colors.red, size: 20),
+                  ),
+                ),
+                SizedBox(width: 8),
+              ],
             ),
           ),
         ],
       ),
+
       body: Column(
         children: [
           Expanded(

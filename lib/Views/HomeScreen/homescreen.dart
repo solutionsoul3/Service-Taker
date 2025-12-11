@@ -204,9 +204,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-//////////////////////////////////////////////////////////////////
-/// ================= HEADER WITH SEARCH =========================
-//////////////////////////////////////////////////////////////////
 
 class _Header extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;

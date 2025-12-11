@@ -5,6 +5,7 @@ import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lottie/lottie.dart' hide Marker;
+import 'package:photo_view/photo_view.dart';
 import 'package:talk/Models/ProviderModel.dart';
 import 'package:talk/Views/ChatScreen/chattingscreenwithuser.dart';
 import 'package:talk/constants/colors.dart';
@@ -497,7 +498,7 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
                               ),
                             ),
                             Text(
-                              '${widget.provider.experience} year',
+                              '${widget.provider.experience} ',
                               style: reusableTextStyle(
                                 fontSize: 14.sp,
                                 color: AppColors.logocolor,
@@ -532,33 +533,46 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
   Widget _buildHeaderImage(BuildContext context) {
     return Stack(
       children: [
-        Container(
-          height: 200.h,
-          width: double.infinity,
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [Colors.black, AppColors.logocolor],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20.r),
-              bottomRight: Radius.circular(20.r),
-            ),
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.only(
-              bottomLeft: Radius.circular(20.r),
-              bottomRight: Radius.circular(20.r),
-            ),
-            child: ColorFiltered(
-              colorFilter: ColorFilter.mode(
-                Colors.black.withOpacity(0.3),
-                BlendMode.darken,
+        GestureDetector(
+          onTap: () {
+            // Open full screen image
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => FullScreenImagePage(
+                  imageUrl: widget.provider.imageUrl,
+                ),
               ),
-              child: Image.network(
-                widget.provider.imageUrl,
-                fit: BoxFit.cover,
+            );
+          },
+          child: Container(
+            height: 200.h,
+            width: double.infinity,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(
+                colors: [Colors.black, AppColors.logocolor],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20.r),
+                bottomRight: Radius.circular(20.r),
+              ),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20.r),
+                bottomRight: Radius.circular(20.r),
+              ),
+              child: ColorFiltered(
+                colorFilter: ColorFilter.mode(
+                  Colors.black.withOpacity(0.3),
+                  BlendMode.darken,
+                ),
+                child: Image.network(
+                  widget.provider.imageUrl,
+                  fit: BoxFit.cover,
+                ),
               ),
             ),
           ),
@@ -567,32 +581,13 @@ class _ProviderDetailsScreenState extends State<ProviderDetailsScreen> {
           top: 20.h,
           left: 16.w,
           child: IconButton(
-            icon: Icon(
-              Icons.arrow_back_ios,
-              color: Colors.white,
-              size: 24.sp,
-            ),
-            onPressed: () {
-              Navigator.of(context).pop();
-            },
+            icon: Icon(Icons.arrow_back_ios, color: Colors.white, size: 24.sp),
+            onPressed: () => Navigator.of(context).pop(),
           ),
         ),
-        // Positioned(
-        //   top: 20.h,
-        //   right: 16.w,
-        //   child: IconButton(
-        //     icon: Icon(
-        //       isFavorited ? Icons.favorite : Icons.favorite_border,
-        //       color: isFavorited ? Colors.red : Colors.white,
-        //       size: 26.sp,
-        //     ),
-        //     onPressed: _toggleFavorite,
-        //   ),
-        // ),
       ],
     );
   }
-
   Widget _buildServiceCard(BuildContext context) {
     return Positioned(
       top: 150.h,
@@ -753,4 +748,27 @@ Widget _buildIconContainer(BuildContext context, IconData icon, String tooltip,
         icon: Icon(icon, color: Colors.white, size: 22),
         tooltip: tooltip,
       ));
+}
+class FullScreenImagePage extends StatelessWidget {
+  final String imageUrl;
+  const FullScreenImagePage({super.key, required this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: GestureDetector(
+        onTap: () => Navigator.of(context).pop(), // tap to close
+        child: Center(
+          child: PhotoView(
+            imageProvider: NetworkImage(imageUrl),
+            loadingBuilder: (context, event) => const Center(
+              child: CircularProgressIndicator(),
+            ),
+            backgroundDecoration: const BoxDecoration(color: Colors.black),
+          ),
+        ),
+      ),
+    );
+  }
 }
