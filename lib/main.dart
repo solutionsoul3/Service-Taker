@@ -1,6 +1,6 @@
 import 'package:firebase_app_check/firebase_app_check.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 
@@ -11,27 +11,19 @@ import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  // ✅ Initialize Notifications
+  // ✅ Initialize notifications (NO navigation here)
   await NotificationService.initialize();
 
+  // ✅ App Check
   await FirebaseAppCheck.instance.activate(
     androidProvider: AndroidProvider.playIntegrity,
     appleProvider: AppleProvider.deviceCheck,
   );
-
-  // ✅ Check if user is logged in, and save their FCM token
-  final user = FirebaseAuth.instance.currentUser;
-  if (user != null) {
-    print("🔑 Logged-in user detected: ${user.uid}");
-    await NotificationService.saveUserToken(
-      uid: user.uid,
-      isProvider: false, // this is the USER app side
-    );
-  }
 
   runApp(const MyApp());
 }
@@ -43,21 +35,54 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ScreenUtilInit(
       designSize: const Size(390, 844),
-      builder: (BuildContext context, Widget? child) {
+      builder: (_, __) {
         return MaterialApp(
-          title: 'App',
+          // navigatorKey: navigatorKey, // 🔥 REQUIRED
           debugShowCheckedModeBanner: false,
+          title: 'App',
           theme: ThemeData(
-            colorScheme: ColorScheme.fromSeed(seedColor: Colors.white),
             scaffoldBackgroundColor: Colors.white,
-            appBarTheme: const AppBarTheme(backgroundColor: Colors.white),
             useMaterial3: true,
           ),
-          home: FirebaseAuth.instance.currentUser != null
-              ? const BottomNavBar()
-              : const LoginScreen(),
+          home: const AppEntry(), // 🔥 DO NOT put BottomNav directly
         );
       },
     );
+  }
+}
+
+/// 🔑 SINGLE ENTRY POINT (THIS FIXES YOUR ISSUE)
+class AppEntry extends StatefulWidget {
+  const AppEntry({super.key});
+
+  @override
+  State<AppEntry> createState() => _AppEntryState();
+}
+
+class _AppEntryState extends State<AppEntry> {
+  @override
+  void initState() {
+    super.initState();
+
+    /// 🔥 Handle notification navigation AFTER UI is ready
+    // WidgetsBinding.instance.addPostFrameCallback((_) async {
+    //   await NotificationService.checkInitialMessage();
+    //
+    //   // ✅ Save FCM token AFTER login
+    //   final user = FirebaseAuth.instance.currentUser;
+    //   if (user != null) {
+    //     await NotificationService.saveUserToken(
+    //       uid: user.uid,
+    //       isProvider: false, // USER app side
+    //     );
+    //   }
+    // });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FirebaseAuth.instance.currentUser != null
+        ? const BottomNavBar()
+        : const LoginScreen();
   }
 }

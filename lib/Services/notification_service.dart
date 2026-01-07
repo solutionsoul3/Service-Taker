@@ -1,3 +1,4 @@
+// lib/Services/notification_service.dart
 import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -8,51 +9,62 @@ import 'package:flutter/services.dart' show rootBundle;
 
 class NotificationService {
   static final FirebaseMessaging _fcm = FirebaseMessaging.instance;
-  static final FlutterLocalNotificationsPlugin _local = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _local =
+      FlutterLocalNotificationsPlugin();
 
+  // Replace with your Firebase project ID (match google-services.json)
   static const String projectId = "g-plug-home-services";
   static const _scopes = ['https://www.googleapis.com/auth/firebase.messaging'];
 
+  /// If you are testing on a single physical device and want distinct tokens
+  /// for "User" and "Provider" records, set this to true. Set to `false` in production.
+  static bool simulateTokens = false;
+
+  /// Initialize FCM and local notifications
   static Future<void> initialize() async {
     await Firebase.initializeApp();
 
-    // 🔔 Ask for notification permissions
-    final settings = await _fcm.requestPermission(alert: true, badge: true, sound: true);
+    final settings = await _fcm.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       print("✅ Notification permission granted");
     } else {
       print("⚠️ Notification permission denied");
     }
 
-    // 🧩 Initialize local notifications
+    // Initialize local notifications
     const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
     const initSettings = InitializationSettings(android: androidInit);
     await _local.initialize(initSettings);
 
-    // ⚙️ Handle background and terminated notifications
+    // ✅ Handle notifications when the app is in background or terminated
     FirebaseMessaging.onBackgroundMessage(_backgroundHandler);
 
-    // ⚙️ Handle when user taps on notification (app opened from background)
+    // ✅ Handle notification tap when app opened from background
     FirebaseMessaging.onMessageOpenedApp.listen((message) {
       print("📩 Notification clicked: ${message.notification?.title}");
     });
 
-    // ⚙️ Foreground messages — don't show local notifications here
+    // ❌ Do NOT show notifications in foreground
     FirebaseMessaging.onMessage.listen((message) {
-      print("💬 Message received in foreground → skipping notification");
-      // ❌ Do not call _showLocalNotification() here
+      print("💬 Provider in foreground → skipping local notification.");
+      // do nothing here to suppress foreground notifications
     });
   }
 
-
   static Future<void> _backgroundHandler(RemoteMessage message) async {
     await Firebase.initializeApp();
-    print("📨 Background message: ${message.notification?.title}");
-    await _showLocalNotification(message); // ✅ Keep this so notification shows
+    print("📨 Background message received: ${message.notification?.title}");
+    await _showLocalNotification(message); // ✅ show notification here
   }
 
-
-  /// ✅ Save real FCM token (no prefixes)
+  /// Save the current logged-in device token to Firestore under the correct collection
+  /// `isProvider == true` -> Provider collection, else User collection.
+  /// ✅ Save FCM token safely by role (User vs Provider)
   static Future<void> saveUserToken({
     required String uid,
     required bool isProvider,
@@ -60,19 +72,21 @@ class NotificationService {
     try {
       final token = await _fcm.getToken();
       if (token == null) {
-        print("⚠️ Failed to get FCM token");
+        print("⚠️ No FCM token available for $uid");
         return;
       }
 
       final collection = isProvider ? 'Provider' : 'User';
-      await FirebaseFirestore.instance.collection(collection).doc(uid).set({
-        'fcmToken': token,
-        'lastUpdated': DateTime.now(),
-      }, SetOptions(merge: true));
 
-      print("💾 Saved FCM token for $collection: $token");
+      // ✅ Save token only in the correct collection
+      await FirebaseFirestore.instance
+          .collection(collection)
+          .doc(uid)
+          .set({'fcmToken': token}, SetOptions(merge: true));
+
+      print("💾 FCM token saved for $collection → $uid");
     } catch (e) {
-      print("❌ Error saving token: $e");
+      print("❌ Error saving FCM token: $e");
     }
   }
 
@@ -87,8 +101,8 @@ class NotificationService {
       priority: Priority.high,
       playSound: true,
     );
-    const details = NotificationDetails(android: androidDetails);
 
+    const details = NotificationDetails(android: androidDetails);
     await _local.show(
       notification.hashCode,
       notification.title,
@@ -97,14 +111,20 @@ class NotificationService {
     );
   }
 
-  static Future<void> sendPushNotification({
+  /// Send push notification using FCM HTTP v1 and service account credentials loaded from assets.
+  /// Returns true if successfully sent, false otherwise.
+  static Future<bool> sendPushNotification({
     required String token,
     required String title,
     required String body,
   }) async {
     try {
-      final serviceAccountJson = await rootBundle.loadString('assets/service-account.json');
-      final creds = auth.ServiceAccountCredentials.fromJson(jsonDecode(serviceAccountJson));
+      final serviceAccountJson =
+          await rootBundle.loadString('assets/service-account.json');
+      final creds = auth.ServiceAccountCredentials.fromJson(
+        jsonDecode(serviceAccountJson),
+      );
+
       final client = await auth.clientViaServiceAccount(creds, _scopes);
 
       final message = {
@@ -115,23 +135,76 @@ class NotificationService {
         }
       };
 
+      final uri = Uri.parse(
+          'https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
 
       final response = await client.post(
-        Uri.parse('https://fcm.googleapis.com/v1/projects/$projectId/messages:send'),
+        uri,
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode(message),
       );
 
+      client.close();
+
       if (response.statusCode == 200) {
         print("✅ Push notification sent successfully!");
+        return true;
       } else {
         print("❌ Failed to send notification: ${response.statusCode}");
         print("Response: ${response.body}");
-      }
 
-      client.close();
+        // Parse response, if UNREGISTERED, remove token from Firestore
+        try {
+          final bodyJson = jsonDecode(response.body);
+          final error = bodyJson['error'];
+          final details = error != null ? error['details'] : null;
+          if (details is List) {
+            for (final d in details) {
+              if (d['@type']?.toString().contains('FcmError') == true &&
+                  d['errorCode'] == 'UNREGISTERED') {
+                // Remove token occurrences from both collections
+                await _removeTokenFromFirestore(token);
+                print("🗑️ Removed UNREGISTERED token from Firestore: $token");
+                break;
+              }
+            }
+          }
+        } catch (_) {
+          // ignore json parse issues
+        }
+
+        return false;
+      }
     } catch (e) {
       print("❌ Error sending notification: $e");
+      return false;
+    }
+  }
+
+  /// Search both User and Provider collections for documents with the token and delete the token field.
+  static Future<void> _removeTokenFromFirestore(String token) async {
+    final firestore = FirebaseFirestore.instance;
+
+    // Search User collection
+    final userQuery = await firestore
+        .collection('User')
+        .where('fcmToken', isEqualTo: token)
+        .get();
+
+    for (final d in userQuery.docs) {
+      await d.reference.update({'fcmToken': FieldValue.delete()});
+      print("🗑️ Cleared fcmToken for User/${d.id}");
+    }
+
+    // Search Provider collection
+    final providerQuery = await firestore
+        .collection('Provider')
+        .where('fcmToken', isEqualTo: token)
+        .get();
+
+    for (final d in providerQuery.docs) {
+      await d.reference.update({'fcmToken': FieldValue.delete()});
+      print("🗑️ Cleared fcmToken for Provider/${d.id}");
     }
   }
 }

@@ -7,7 +7,7 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:lottie/lottie.dart' hide Marker;
 import 'package:photo_view/photo_view.dart';
 import 'package:talk/Models/ProviderModel.dart';
-import 'package:talk/Views/ChatScreen/chattingscreenwithuser.dart';
+import 'package:talk/Views/ChatScreen/chat_with_provider.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/widgets/reusableboxdecoration.dart';

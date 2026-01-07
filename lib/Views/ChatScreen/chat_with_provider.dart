@@ -11,11 +11,20 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class ChatWithProvider extends StatefulWidget {
   final ProviderModel provider;
-  const ChatWithProvider({super.key, required this.provider});
+  final String? chatRoomId; // optional, can be null if not from notification
+  final String? receiverId;
+
+  const ChatWithProvider({
+    super.key,
+    required this.provider,
+    this.chatRoomId,
+    this.receiverId,
+  });
 
   @override
   State<ChatWithProvider> createState() => _ChatWithProviderState();
 }
+
 
 class _ChatWithProviderState extends State<ChatWithProvider> {
   final ChatController chatController = Get.put(ChatController());
@@ -36,17 +45,29 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
     if (user != null) {
       currentUserId = user.uid;
 
-      // ✅ Save FCM token
       await NotificationService.saveUserToken(
-          uid: currentUserId, isProvider: false);
+        uid: currentUserId,
+        isProvider: false,
+      );
 
-      // ✅ Fetch user's actual name and image from Firestore
       await _fetchUserProfile();
 
-      // ✅ Initialize chat
-      chatController.initChat(currentUserId, widget.provider.id, false);
+      final String otherUserId =
+          widget.receiverId ?? widget.provider.id;
+
+      // 🔐 SAFER: force chatRoomId if coming from notification
+      if (widget.chatRoomId != null) {
+        chatController.chatRoomId.value = widget.chatRoomId!;
+      }
+
+      chatController.initChat(
+        currentUserId,
+        otherUserId,
+        false,
+      );
     }
   }
+
 
   /// 🔹 Fetch current user's real name and profile image
   Future<void> _fetchUserProfile() async {

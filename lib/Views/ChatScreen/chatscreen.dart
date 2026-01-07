@@ -6,7 +6,7 @@ import 'package:get/get.dart';
 
 import '../../Constants/colors.dart';
 import '../../Models/ProviderModel.dart';
-import 'chattingscreenwithuser.dart';
+import 'chat_with_provider.dart';
 
 class ChatScreen extends StatelessWidget {
   final bool isProvider; // true if current user is a provider
