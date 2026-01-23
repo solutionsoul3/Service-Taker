@@ -42,7 +42,7 @@ class _HomeScreenState extends State<HomeScreen> {
     {"catename": "Tow Truck", "imageURL": "assets/icons/tow_truck.png"},
     {"catename": "Fumigator", "imageURL": "assets/icons/fumigator.png"},
     {"catename": "Mechanic", "imageURL": "assets/icons/mechanic.png"},
-    {"catename": "Movers", "imageURL": "assets/icons/movers.png"},
+    {"catename": "Mover", "imageURL": "assets/icons/movers.png"},
     {
       "catename": "Internet Provider",
       "imageURL": "assets/icons/internet_provider.png"

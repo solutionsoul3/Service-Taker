@@ -1,7 +1,8 @@
+// lib/Models/MessageModel.dart
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 class MessageModel {
-  final String? id; // add this
+  final String? id; // message ID
   final String senderId;
   final String receiverId;
   final String text;
@@ -12,7 +13,7 @@ class MessageModel {
   final String receiverImage;
 
   MessageModel({
-    this.id, // include in constructor
+    this.id,
     required this.senderId,
     required this.receiverId,
     required this.text,
@@ -24,6 +25,7 @@ class MessageModel {
   });
 
   Map<String, dynamic> toMap() => {
+    "id": id,
     "senderId": senderId,
     "receiverId": receiverId,
     "text": text,
@@ -36,7 +38,7 @@ class MessageModel {
 
   factory MessageModel.fromMap(Map<String, dynamic> data, {String? id}) {
     return MessageModel(
-      id: id,
+      id: id ?? data['id'],
       senderId: data["senderId"],
       receiverId: data["receiverId"],
       text: data["text"],
@@ -48,4 +50,3 @@ class MessageModel {
     );
   }
 }
-

@@ -81,8 +81,10 @@ class ChatController extends GetxController {
       token: receiverToken,
       title: senderName,
       body: text, // 🔥 UID FIELD
-      // chatRoomId: chatRoomId.value,   // ✅ REQUIRED
-      // otherUserId: senderId,
+      chatRoomId: chatRoomId.value,
+      receiverId: receiverId,
+      // ✅ REQUIRED
+
     );
 
   }

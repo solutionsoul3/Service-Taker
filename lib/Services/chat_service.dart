@@ -8,11 +8,9 @@ class ChatService {
   String getChatRoomId(String uid1, String uid2) =>
       uid1.hashCode <= uid2.hashCode ? "${uid1}_$uid2" : "${uid2}_$uid1";
 
-  /// Send message to both User and Provider
+  /// Send message and store chat/message IDs
   Future<void> sendMessage(MessageModel message, String chatRoomId) async {
-    // Detect sender type
     final senderIsProvider = await _isProvider(message.senderId);
-
     final senderCollection = senderIsProvider ? "Provider" : "User";
     final receiverCollection = senderIsProvider ? "User" : "Provider";
 
@@ -31,10 +29,11 @@ class ChatService {
         .collection("messages");
 
     final docRef = senderRef.doc();
-    await docRef.set(message.toMap());
-    await receiverRef.doc(docRef.id).set(message.toMap());
+    final messageWithId = message.toMap()..['id'] = docRef.id;
 
-    // Update chat metadata
+    await docRef.set(messageWithId);
+    await receiverRef.doc(docRef.id).set(messageWithId);
+
     await _updateChatRoomMetadata(
         message, chatRoomId, senderCollection, receiverCollection);
   }
@@ -42,6 +41,7 @@ class ChatService {
   Future<void> _updateChatRoomMetadata(MessageModel message, String chatRoomId,
       String senderCollection, String receiverCollection) async {
     final chatData = {
+      "chatRoomId": chatRoomId,
       "participants": [message.senderId, message.receiverId],
       "names": {
         message.senderId: message.senderName,
@@ -82,14 +82,13 @@ class ChatService {
         .orderBy("timestamp", descending: true)
         .snapshots()
         .map((snapshot) => snapshot.docs
-            .map((doc) => MessageModel.fromMap(doc.data(), id: doc.id))
-            .toList());
+        .map((doc) => MessageModel.fromMap(doc.data(), id: doc.id))
+        .toList());
   }
 
   Future<void> deleteChat(
       String currentUserId, String chatRoomId, bool isProvider) async {
     final collection = isProvider ? "Provider" : "User";
-
     final messagesRef = _db
         .collection(collection)
         .doc(currentUserId)
@@ -100,7 +99,6 @@ class ChatService {
     for (var doc in messages.docs) {
       await doc.reference.delete();
     }
-
     await _db
         .collection(collection)
         .doc(currentUserId)

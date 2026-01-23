@@ -3,7 +3,10 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+
     <application
+        android:usesCleartextTraffic="true"
         android:label="G-Plug"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
