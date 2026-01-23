@@ -6,21 +6,15 @@ import '../Services/notification_service.dart';
 
 class ChatController extends GetxController {
   final ChatService _chatService = ChatService();
-
   var messages = <MessageModel>[].obs;
   var chatRoomId = "".obs;
 
   /// Initialize chat
+  /// isProvider = true if current user is provider, false if user
   void initChat(String currentUserId, String otherUserId, bool isProvider) {
-    chatRoomId.value =
-        _chatService.getChatRoomId(currentUserId, otherUserId);
-
+    chatRoomId.value = _chatService.getChatRoomId(currentUserId, otherUserId);
     messages.bindStream(
-      _chatService.getMessages(
-        currentUserId,
-        chatRoomId.value,
-        isProvider,
-      ),
+      _chatService.getMessages(currentUserId, chatRoomId.value, isProvider),
     );
   }
 
@@ -47,54 +41,54 @@ class ChatController extends GetxController {
       receiverImage: receiverImage,
     );
 
-    // 🔍 Detect sender type
-    final bool senderIsProvider = await _isProvider(senderId);
-
-    // 📩 Send message to Firestore
+    // Save message to Firestore
     await _chatService.sendMessage(message, chatRoomId.value);
 
-    // 🔔 Get receiver FCM token
-    String? receiverToken;
+    // Detect sender type (user or provider)
+    final bool senderIsProvider = await _isProvider(senderId);
 
+    // Get receiver FCM token and phone safely
+    String? receiverToken;
+    String receiverPhone = '';
     for (final collection in ['User', 'Provider']) {
       final doc = await FirebaseFirestore.instance
           .collection(collection)
           .doc(receiverId)
           .get();
-
-      final token = doc.data()?['fcmToken'];
-      if (doc.exists && token is String && token.isNotEmpty) {
-        receiverToken = token;
-        break;
+      if (doc.exists) {
+        final data = doc.data();
+        final token = data?['fcmToken'] as String?;
+        final phone = data?['phoneNumber']?.toString();
+        if (token != null && token.isNotEmpty) {
+          receiverToken = token;
+          receiverPhone = phone ?? '';
+          break;
+        }
       }
     }
 
     if (receiverToken == null || receiverId == senderId) return;
 
-    /// 🔥 IMPORTANT LOGIC
-    /// If PROVIDER sends → providerId = senderId
-    /// If USER sends → providerId = receiverId
-    final String providerUid =
-    senderIsProvider ? senderId : receiverId;
-
+    /// 🔥 Send push notification with all required fields
     await NotificationService.sendPushNotification(
       token: receiverToken,
       title: senderName,
-      body: text, // 🔥 UID FIELD
+      body: text,
+      userId: senderId, // sender’s userId
+      userName: senderName, // sender’s name
+      userImage: senderImage, // sender’s image
       chatRoomId: chatRoomId.value,
-      receiverId: receiverId,
-      // ✅ REQUIRED
-
+      receiverId: receiverId, // receiver’s userId
+      contactNumber: receiverPhone,
+      providerId:
+          senderIsProvider ? senderId : receiverId, // correct providerId
     );
-
   }
 
-  /// Check provider
+  /// Check if user is provider
   Future<bool> _isProvider(String uid) async {
-    final doc = await FirebaseFirestore.instance
-        .collection("Provider")
-        .doc(uid)
-        .get();
+    final doc =
+        await FirebaseFirestore.instance.collection("Provider").doc(uid).get();
     return doc.exists;
   }
 
@@ -102,12 +96,7 @@ class ChatController extends GetxController {
   Future<void> deleteChat(String currentUserId, bool isProvider) async {
     if (chatRoomId.value.isEmpty) return;
 
-    await _chatService.deleteChat(
-      currentUserId,
-      chatRoomId.value,
-      isProvider,
-    );
-
+    await _chatService.deleteChat(currentUserId, chatRoomId.value, isProvider);
     messages.clear();
   }
 }

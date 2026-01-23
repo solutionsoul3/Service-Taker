@@ -33,7 +33,7 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
   late String currentUserId;
   String currentUserName = "User";
   String currentUserImage = "https://via.placeholder.com/150";
-
+  var isLoading = true.obs; // 🔹 Loading indicator
   @override
   void initState() {
     super.initState();
@@ -59,12 +59,17 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
       if (widget.chatRoomId != null) {
         chatController.chatRoomId.value = widget.chatRoomId!;
       }
-
+      isLoading.value = true;
       chatController.initChat(
         currentUserId,
         otherUserId,
         false,
       );
+      // Delay a bit to simulate loading (or can use stream listener)
+      await Future.delayed(Duration(milliseconds: 300));
+
+      isLoading.value = false; // 🔹 Chat ready
+
     }
   }
 
@@ -246,8 +251,19 @@ class _ChatWithProviderState extends State<ChatWithProvider> {
         children: [
           Expanded(
             child: Obx(() {
+              if (isLoading.value) {
+                // 🔹 Show circular indicator while loading
+                return const Center(
+                  child: CircularProgressIndicator(
+                    color: Colors.green,
+                  ),
+                );
+              }
+
               final msgs = chatController.messages;
-              if (msgs.isEmpty) return Center(child: Text("No messages yet"));
+              if (msgs.isEmpty) {
+                return const Center(child: Text("No messages yet"));
+              }
               return ListView.builder(
                 reverse: true,
                 itemCount: msgs.length,

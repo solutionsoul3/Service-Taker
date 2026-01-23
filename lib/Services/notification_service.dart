@@ -165,52 +165,60 @@ class NotificationService {
   }
 
   /// SEND PUSH (HTTP v1)
-  static Future<void> sendPushNotification({
+  static Future<bool> sendPushNotification({
     required String token,
     required String title,
     required String body,
-    required String receiverId,
+    required String userId,       // sender or receiver userId
+    required String userName,     // sender or receiver name
+    required String userImage,    // sender or receiver image
     required String chatRoomId,
+    required String receiverId,
+    required String contactNumber,
+    required String providerId,   // providerId if user sends
   }) async {
-    debugPrint("📤 Sending notification → $receiverId / $chatRoomId");
+    try {
+      final serviceAccountJson =
+      await rootBundle.loadString('assets/service-account.json');
 
-    final serviceAccount =
-    await rootBundle.loadString('assets/service-account.json');
+      final creds = auth.ServiceAccountCredentials.fromJson(
+        jsonDecode(serviceAccountJson),
+      );
 
-    final creds = auth.ServiceAccountCredentials.fromJson(
-      jsonDecode(serviceAccount),
-    );
+      final client = await auth.clientViaServiceAccount(creds, _scopes);
 
-    final client = await auth.clientViaServiceAccount(creds, _scopes);
-
-    final message = {
-      "message": {
-        "token": token,
-        "notification": {
-          "title": title,
-          "body": body,
-        },
-        "data": {
-          "type": "chat",
-          "receiverId": receiverId,
-          "chatRoomId": chatRoomId,
-        },
-        "android": {
-          "priority": "high"
+      final message = {
+        "message": {
+          "token": token,
+          "notification": {"title": title, "body": body},
+          "data": {
+            "type": "chat",
+            "userId": userId,
+            "userName": userName,
+            "userImage": userImage,
+            "chatRoomId": chatRoomId,
+            "receiverId": receiverId,
+            "contactNumber": contactNumber,
+            "providerId": providerId,
+          },
+          "android": {"priority": "high"},
         }
-      }
-    };
+      };
 
-    final uri = Uri.parse(
-      'https://fcm.googleapis.com/v1/projects/$projectId/messages:send',
-    );
+      final uri = Uri.parse(
+          'https://fcm.googleapis.com/v1/projects/$projectId/messages:send');
 
-    await client.post(
-      uri,
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode(message),
-    );
+      final response = await client.post(
+        uri,
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode(message),
+      );
 
-    client.close();
+      client.close();
+      return response.statusCode == 200;
+    } catch (e) {
+      print("❌ Notification error: $e");
+      return false;
+    }
   }
 }
