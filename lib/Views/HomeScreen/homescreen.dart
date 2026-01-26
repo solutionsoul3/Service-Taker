@@ -48,6 +48,12 @@ class _HomeScreenState extends State<HomeScreen> {
       "imageURL": "assets/icons/internet_provider.png"
     },
     {"catename": "Gas Provider", "imageURL": "assets/icons/gas_provider.png"},
+    {"catename": "Cooker Technician", "imageURL": "assets/icons/cooker.png"},
+    {"catename": "Fridge Technician", "imageURL": "assets/icons/fridge.png"},
+    {"catename": "AC Technician", "imageURL": "assets/icons/ac.png"},
+    {"catename": "Washing Machine Technician", "imageURL": "assets/icons/washing.png"},
+    {"catename": "Water Heater Technician", "imageURL": "assets/icons/water.png"},
+
   ];
 
   static const _popularServices = [
