@@ -6,11 +6,13 @@ class UserModel {
   final String email;
    final String? bio; 
   final String? imageUrl;
+  final String? phoneNumber;
 
   UserModel({
     required this.uid,
     required this.name,
     required this.email,
+    this.phoneNumber,
     this.bio, 
     this.imageUrl,
   });
@@ -24,6 +26,7 @@ class UserModel {
          bio: data['bio'],  
       email: data['email'],
       imageUrl: data['imageUrl'],
+      phoneNumber: data['phoneNumber'],
     );
   }
 }

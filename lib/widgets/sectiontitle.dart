@@ -30,17 +30,17 @@ class SectionTitle extends StatelessWidget {
               fontFamily: 'Urbanist',
             ),
           ),
-          GestureDetector(
-            onTap: onActionTap,
-            child: Text(
-              actionText,
-              style: TextStyle(
-                fontSize: 15.sp,
-                fontFamily: 'Urbanist',
-                color: AppColors.logocolor,
-              ),
-            ),
-          ),
+          // GestureDetector(
+          //   onTap: onActionTap,
+          //   child: Text(
+          //     actionText,
+          //     style: TextStyle(
+          //       fontSize: 15.sp,
+          //       fontFamily: 'Urbanist',
+          //       color: AppColors.logocolor,
+          //     ),
+          //   ),
+          // ),
         ],
       ),
     );

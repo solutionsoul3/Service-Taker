@@ -40,6 +40,8 @@ class _ExploreCategoryState extends State<ExploreCategory>
       body: Stack(
         children: [
           BackgroundContainer(
+            width: 0,
+            radius: 0,
             child: Padding(
               padding: EdgeInsets.only(top: 350.h),
               child: Padding(

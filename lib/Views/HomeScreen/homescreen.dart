@@ -1,9 +1,8 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/Models/UserModel.dart';
 import 'package:talk/Views/Drawer/drawerscreen.dart';
-import 'package:talk/Views/ExploreCategory/explorecategory.dart';
-import 'package:talk/Views/MyBookings/NotificationScreen/notificationscreen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/widgets/image_carousel.dart';
@@ -11,7 +10,6 @@ import 'package:talk/widgets/sectiontitle.dart';
 import '../../Controller/user-contoller.dart';
 import '../../widgets/categoryItem_row.dart';
 import '../../widgets/popular-servie-card.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,11 +23,15 @@ class _HomeScreenState extends State<HomeScreen> {
   final UserController _userController = UserController();
   UserModel? currentUser;
 
+  String searchQuery = ""; // 🔍 Search text
+
+  final TextEditingController _searchController = TextEditingController();
+
   static const _carouselImages = [
-    'assets/images/homepics/slider1.jpg',
-    'assets/images/homepics/slider4.jpg',
-    'assets/images/homepics/slider2.jpg',
-    'assets/images/homepics/slider3.jpg',
+    AppImages.plumber,
+    AppImages.handman,
+    AppImages.service,
+    AppImages.construction,
   ];
 
   static const _categories = [
@@ -40,16 +42,28 @@ class _HomeScreenState extends State<HomeScreen> {
     {"catename": "Tow Truck", "imageURL": "assets/icons/tow_truck.png"},
     {"catename": "Fumigator", "imageURL": "assets/icons/fumigator.png"},
     {"catename": "Mechanic", "imageURL": "assets/icons/mechanic.png"},
-    {"catename": "Movers", "imageURL": "assets/icons/movers.png"},
-    {"catename": "Internet Provider", "imageURL": "assets/icons/internet_provider.png"},
+    {"catename": "Mover", "imageURL": "assets/icons/movers.png"},
+    {
+      "catename": "Internet Provider",
+      "imageURL": "assets/icons/internet_provider.png"
+    },
     {"catename": "Gas Provider", "imageURL": "assets/icons/gas_provider.png"},
+    {"catename": "Cooker Technician", "imageURL": "assets/icons/cooker.png"},
+    {"catename": "Fridge Technician", "imageURL": "assets/icons/fridge.png"},
+    {"catename": "AC Technician", "imageURL": "assets/icons/ac.png"},
+    {"catename": "Washing Machine Technician", "imageURL": "assets/icons/washing.png"},
+    {"catename": "Water Heater Technician", "imageURL": "assets/icons/water.png"},
+
   ];
 
   static const _popularServices = [
-    {'title': 'Plumber', 'img': AppImages.plumber, 'rating': 4.8},
-    {'title': 'Handyman', 'img': AppImages.handman, 'rating': 4.7},
-    {'title': 'Electrician', 'img': AppImages.service, 'rating': 4.9},
-    {'title': 'Construction', 'img': AppImages.construction, 'rating': 4.6},
+    {"catename": "Electrician", "imageURL": "assets/images/services/electricain.jpeg"},
+    {"catename": "Mechanic", "imageURL": "assets/images/services/mechanic.jpg"},
+    {"catename": "Painter", "imageURL": "assets/images/services/painter.jpg"},
+    {
+      "catename": "Internet Provider",
+      "imageURL": "assets/images/services/construction.jpeg"
+    }
   ];
 
   @override
@@ -65,6 +79,16 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final filteredCategories = _categories
+        .where((item) =>
+        item["catename"]!.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+
+    final filteredPopular = _popularServices
+        .where((item) =>
+        item["catename"]!.toLowerCase().contains(searchQuery.toLowerCase()))
+        .toList();
+
     return Scaffold(
       key: _scaffoldKey,
       backgroundColor: AppColors.bgcolor,
@@ -76,41 +100,109 @@ class _HomeScreenState extends State<HomeScreen> {
             _Header(
               scaffoldKey: _scaffoldKey,
               currentUser: currentUser,
+              searchController: _searchController,
+              onSearch: (value) {
+                setState(() => searchQuery = value);
+              },
             ),
+
+            /// ---- CAROUSEL ----
             SizedBox(height: 20.h),
             ImageCarousel(imagePaths: _carouselImages, height: 240.h),
             SizedBox(height: 15.h),
-            SectionTitle(title: 'Categories', actionText: 'See all'),
-            SizedBox(height: 8.h),
-            SizedBox(
-              height: 110.h,
-              child: ListView.builder(
-                padding: EdgeInsets.symmetric(horizontal: 15.w),
-                scrollDirection: Axis.horizontal,
-                itemCount: _categories.length,
-                itemBuilder: (_, i) => CategoryItem(category: _categories[i]),
+
+            /// ---- SEARCH RESULTS ----
+            if (searchQuery.isNotEmpty) ...[
+              SectionTitle(title: "Search Results", actionText: ""),
+              SizedBox(height: 10.h),
+
+              if (filteredCategories.isEmpty && filteredPopular.isEmpty)
+                Center(
+                    child: Text("No results found",
+                        style: TextStyle(fontSize: 16.sp))),
+
+              /// Filtered Categories
+              if (filteredCategories.isNotEmpty) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  child: Text("Categories",
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                ),
+                SizedBox(height: 10.h),
+                SizedBox(
+                  height: 110.h,
+                  child: ListView.builder(
+                    padding: EdgeInsets.symmetric(horizontal: 15.w),
+                    scrollDirection: Axis.horizontal,
+                    itemCount: filteredCategories.length,
+                    itemBuilder: (_, i) =>
+                        CategoryItem(category: filteredCategories[i]),
+                  ),
+                ),
+              ],
+
+              /// Filtered Popular Services
+              if (filteredPopular.isNotEmpty) ...[
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  child: Text("Popular Services",
+                      style: TextStyle(
+                          fontSize: 18.sp, fontWeight: FontWeight.bold)),
+                ),
+                SizedBox(height: 10.h),
+                SizedBox(
+                  height: 210.h,
+                  child: ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    padding: EdgeInsets.symmetric(horizontal: 15.w),
+                    itemCount: filteredPopular.length,
+                    separatorBuilder: (_, __) => SizedBox(width: 16.w),
+                    itemBuilder: (_, i) {
+                      final category =
+                      filteredPopular[i] as Map<String, dynamic>;
+                      return PopularServiceCard(category: category);
+                    },
+                  ),
+                ),
+              ],
+
+              SizedBox(height: 30.h),
+            ]
+            else ...[
+              /// ---- ORIGINAL CATEGORIES ----
+              SectionTitle(title: 'Categories', actionText: 'See all'),
+              SizedBox(height: 8.h),
+              SizedBox(
+                height: 110.h,
+                child: ListView.builder(
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _categories.length,
+                  itemBuilder: (_, i) =>
+                      CategoryItem(category: _categories[i]),
+                ),
               ),
-            ),
-            SizedBox(height: 15.h),
-            SectionTitle(title: 'Popular Services', actionText: 'View all'),
-            SizedBox(height: 16.h),
-            SizedBox(
-              height: 210.h,
-              child: ListView.separated(
-                scrollDirection: Axis.horizontal,
-                padding: EdgeInsets.symmetric(horizontal: 15.w),
-                itemCount: _popularServices.length,
-                separatorBuilder: (_, __) => SizedBox(width: 16.w),
-                itemBuilder: (_, i) {
-                  final s = _popularServices[i];
-                  return PopularServiceCard(
-                    title: s['title'] as String,
-                    imagePath: s['img'] as String,
-                    rating: s['rating'] as double,
-                  );
-                },
+              SizedBox(height: 15.h),
+
+              /// ---- ORIGINAL POPULAR SERVICES ----
+              SectionTitle(title: 'Popular Services', actionText: 'View all'),
+              SizedBox(height: 16.h),
+              SizedBox(
+                height: 210.h,
+                child: ListView.separated(
+                  scrollDirection: Axis.horizontal,
+                  padding: EdgeInsets.symmetric(horizontal: 15.w),
+                  itemCount: _popularServices.length,
+                  separatorBuilder: (_, __) => SizedBox(width: 16.w),
+                  itemBuilder: (_, i) {
+                    final category =
+                    _popularServices[i] as Map<String, dynamic>;
+                    return PopularServiceCard(category: category);
+                  },
+                ),
               ),
-            )
+            ],
           ],
         ),
       ),
@@ -118,17 +210,25 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-/// ================= HEADER =================
+
 class _Header extends StatelessWidget {
   final GlobalKey<ScaffoldState> scaffoldKey;
   final UserModel? currentUser;
 
-  const _Header({required this.scaffoldKey, required this.currentUser});
+  final TextEditingController searchController;
+  final Function(String) onSearch;
+
+  const _Header({
+    required this.scaffoldKey,
+    required this.currentUser,
+    required this.searchController,
+    required this.onSearch,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      height: 220.h,
+      height: 230.h,
       decoration: BoxDecoration(
         borderRadius: BorderRadius.vertical(bottom: Radius.circular(30.r)),
         gradient: const LinearGradient(
@@ -157,40 +257,49 @@ class _Header extends StatelessWidget {
         icon: const Icon(Icons.menu, color: Colors.white, size: 28),
         onPressed: () => scaffoldKey.currentState?.openDrawer(),
       ),
-      GestureDetector(
-        onTap: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const NotificationScreen()),
+    ],
+  );
+
+  Widget _userInfo() {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 26.r,
+          backgroundColor: Colors.grey.shade300,
+          backgroundImage: (currentUser?.imageUrl != null &&
+              currentUser!.imageUrl!.isNotEmpty)
+              ? NetworkImage(currentUser!.imageUrl!)
+              : null,
+          child: (currentUser?.imageUrl == null ||
+              currentUser!.imageUrl!.isEmpty)
+              ? const Icon(Icons.person, color: Colors.white, size: 28)
+              : null,
         ),
-        child: const Icon(Icons.notifications, color: Colors.white, size: 28),
-      )
-    ],
-  );
-
-  Widget _userInfo() => Row(
-    children: [
-      CircleAvatar(
-        radius: 26.r,
-        backgroundImage:  AssetImage(AppImages.applogo),
-
-      ),
-      SizedBox(width: 10.w),
-      Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text("Welcome back,", style: TextStyle(color: Colors.white, fontSize: 23.sp,fontWeight: FontWeight.bold)),
-          Text(
-            currentUser?.name ?? "Loading...",
-            style: TextStyle(
-              fontSize: 17.sp,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
+        SizedBox(width: 10.w),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              "Welcome back,",
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 23.sp,
+                fontWeight: FontWeight.bold,
+              ),
             ),
-          ),
-        ],
-      ),
-    ],
-  );
+            Text(
+              currentUser?.name ?? "Loading...",
+              style: TextStyle(
+                fontSize: 17.sp,
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
   Widget _searchBar() => Container(
     height: 40.h,
@@ -205,7 +314,12 @@ class _Header extends StatelessWidget {
         SizedBox(width: 6.w),
         Expanded(
           child: TextField(
+            controller: searchController,
+            onChanged: onSearch,
+            textAlignVertical: TextAlignVertical.center,
             decoration: InputDecoration(
+              isCollapsed: true,
+              contentPadding: EdgeInsets.zero,
               hintText: "Search services...",
               hintStyle: TextStyle(fontSize: 13.sp, color: Colors.grey),
               border: InputBorder.none,

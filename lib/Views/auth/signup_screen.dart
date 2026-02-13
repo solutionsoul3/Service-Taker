@@ -1,18 +1,17 @@
 import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:intl_phone_field/intl_phone_field.dart';
 import 'package:talk/Views/auth/login_screen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 import 'package:talk/constants/reusable_button.dart';
 import 'package:talk/widgets/textfields.dart';
+
+import '../Map_Location_Picker/map_location_picker.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -25,10 +24,13 @@ class _SignupScreenState extends State<SignupScreen> {
   final _auth = FirebaseAuth.instance;
   final _firestore = FirebaseFirestore.instance;
   bool _isLoading = false;
+  double? _selectedLat;
+  double? _selectedLng;
   File? _selectedImage;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final _addressController = TextEditingController();
   String _phoneNumber = '';
   Future<void> _pickImage() async {
     final ImagePicker picker = ImagePicker();
@@ -46,48 +48,65 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      // Create user in Firebase Auth
+      // Create the user in Firebase Authentication
       UserCredential userCredential =
-          await _auth.createUserWithEmailAndPassword(
+      await _auth.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      // Get user UID
-      String uid = userCredential.user!.uid;
+      User? user = userCredential.user;
 
-      // Initialize a variable for the image URL
-      String? imageUrl;
+      // Send verification email
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
 
-      if (_selectedImage != null) {
-        // Upload image to Firebase Storage
-        final storageRef =
-            FirebaseStorage.instance.ref().child('user_images/$uid.jpg');
-        UploadTask uploadTask = storageRef.putFile(_selectedImage!);
+        Fluttertoast.showToast(
+          msg: "Verification email sent! Please check your inbox.",
+        );
 
-        TaskSnapshot snapshot = await uploadTask.whenComplete(() => {});
-        imageUrl = await snapshot.ref.getDownloadURL();
+        // Save user info in Firestore temporarily
+        await _firestore.collection('User').doc(user.uid).set({
+          'name': _nameController.text.trim(),
+          'email': _emailController.text.trim(),
+          'uid': user.uid,
+          'imageUrl': null,
+          'location': _addressController.text,
+          'latitude': _selectedLat,
+          'longitude': _selectedLng,
+          'isVerified': false, // track verification status
+        });
+
+        // Sign out so unverified users can’t access app
+        await _auth.signOut();
+
+        // Go to login screen
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+        );
       }
-
-      await _firestore.collection('User').doc(uid).set({
-        'name': _nameController.text.trim(),
-        'email': _emailController.text.trim(),
-        // 'phoneNumber': _phoneNumber,
-        'uid': uid,
-        'imageUrl': imageUrl,
-      });
-
-      Fluttertoast.showToast(msg: "Account created successfully!");
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
-      );
     } on FirebaseAuthException catch (e) {
       Fluttertoast.showToast(msg: e.message ?? "Failed to create account");
     } finally {
       setState(() {
         _isLoading = false;
+      });
+    }
+  }
+
+
+  Future<void> _selectLocationFromMap(BuildContext context) async {
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const MapLocationPickerScreen()),
+    );
+
+    if (result != null) {
+      setState(() {
+        _addressController.text = result['address'];
+        _selectedLat = result['lat'];
+        _selectedLng = result['lng'];
       });
     }
   }
@@ -100,6 +119,8 @@ class _SignupScreenState extends State<SignupScreen> {
         child: Stack(
           children: [
             BackgroundContainer(
+              width: 0,
+              radius: 0,
               child: Padding(
                 padding: EdgeInsets.only(top: 300.h),
                 child: Padding(
@@ -108,7 +129,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     children: [
                       SizedBox(height: 10.h),
                       Container(
-                        height: 380.h,
+                        height: 420.h,
                         width: 320.w,
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -120,7 +141,6 @@ class _SignupScreenState extends State<SignupScreen> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              // Full Name TextField
                               TextFieldWithIcon(
                                 labelText: "Full Name",
                                 icon: Icons.person,
@@ -129,7 +149,6 @@ class _SignupScreenState extends State<SignupScreen> {
                                 controller: _nameController,
                               ),
                               SizedBox(height: 10.h),
-                              // Email Address TextField
                               TextFieldWithIcon(
                                 labelText: "Email Address",
                                 icon: Icons.email,
@@ -138,29 +157,6 @@ class _SignupScreenState extends State<SignupScreen> {
                                 keyboardType: TextInputType.emailAddress,
                                 controller: _emailController,
                               ),
-                              // SizedBox(height: 10.h),
-                              // Text(
-                              //   "Phone Number",
-                              //   style: TextStyle(
-                              //     color: Colors.black,
-                              //     fontSize: 15.sp,
-                              //     fontFamily: 'Urbanist',
-                              //   ),
-                              // ),
-                              // IntlPhoneField(
-                              //   decoration: InputDecoration(
-                              //       labelText: 'enter phone no.',
-                              //       labelStyle: TextStyle(
-                              //           fontFamily: 'Urbanist',
-                              //           fontSize: 13.sp,
-                              //           color: Colors.grey),
-                              //       border: InputBorder.none,
-                              //       hintStyle: TextStyle(fontSize: 13.sp)),
-                              //   initialCountryCode: 'US',
-                              //   onChanged: (phone) {
-                              //     _phoneNumber = phone.completeNumber;
-                              //   },
-                              // ),
                               SizedBox(height: 10.h),
                               TextFieldWithIcon(
                                 labelText: "Password",
@@ -169,6 +165,19 @@ class _SignupScreenState extends State<SignupScreen> {
                                 obscureText: true,
                                 iconSize: 20.0,
                                 controller: _passwordController,
+                              ),
+                              SizedBox(height: 10.h),
+                              TextFieldWithIcon(
+                                controller: _addressController,
+                                labelText: "Location",
+                                icon: Icons.location_on,
+                                iconSize: 20.0,
+                                hintText: "Enter location",
+                                validator: (v) => v == null || v.isEmpty
+                                    ? "Enter location"
+                                    : null,
+                                onTap: () => _selectLocationFromMap(context),
+                                readOnly: true,
                               ),
                             ],
                           ),

@@ -1,48 +1,34 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
-
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../Constants/colors.dart';
 
-class PrivacyPolicy extends StatefulWidget {
-  const PrivacyPolicy({super.key});
+class PrivacyPolicyScreen extends StatefulWidget {
+  const PrivacyPolicyScreen({Key? key}) : super(key: key);
 
   @override
-  State<PrivacyPolicy> createState() => _PrivacyPolicyState();
+  State<PrivacyPolicyScreen> createState() => _PrivacyPolicyScreenState();
 }
 
-class _PrivacyPolicyState extends State<PrivacyPolicy> {
-  String? privacyText;
-  bool isLoading = true; // Loading state
+class _PrivacyPolicyScreenState extends State<PrivacyPolicyScreen> {
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  @override
-  void initState() {
-    super.initState();
-    fetchPrivacyPolicy();
-  }
-
-  Future<void> fetchPrivacyPolicy() async {
+  /// 🔹 Fetch Privacy Policy directly from Firestore
+  Future<Map<String, dynamic>?> _getPolicy() async {
     try {
-      QuerySnapshot adminSnapshot =
-          await FirebaseFirestore.instance.collection('Admin').get();
-      if (adminSnapshot.docs.isNotEmpty) {
-        // Assuming you want to get the first document from the Admin collection
-        DocumentSnapshot adminDoc = adminSnapshot.docs.first;
-        QuerySnapshot categorySnapshot =
-            await adminDoc.reference.collection('privacypolicy').get();
-
-        if (categorySnapshot.docs.isNotEmpty) {
-          // Assuming you want to get the first document from the privacypolicy collection
-          privacyText = categorySnapshot.docs.first['privacy'];
-        }
+      DocumentSnapshot doc = await _firestore
+          .collection("PrivacyPolicy")
+          .doc("policy_document")
+          .get();
+      if (doc.exists) {
+        return doc.data() as Map<String, dynamic>?;
+      } else {
+        debugPrint("Privacy Policy document not found.");
+        return null;
       }
     } catch (e) {
-      print('Error fetching privacy policy: $e'); // Handle error as needed
-    } finally {
-      setState(() {
-        isLoading = false; // Update loading state
-      });
+      debugPrint("Error fetching privacy policy: $e");
+      return null;
     }
   }
 
@@ -51,47 +37,82 @@ class _PrivacyPolicyState extends State<PrivacyPolicy> {
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(CupertinoIcons.back, color: Colors.white),
-          onPressed: () {
-            Navigator.of(context).pop();
-          },
-        ),
-        title: const Text(
-          'Privacy Policy',
-          style: TextStyle(
-            color: Colors.white,
-            fontFamily: 'Urbanist',
-          ),
-        ),
+        automaticallyImplyLeading: false,
         backgroundColor: AppColors.logocolor,
         elevation: 0,
+        title: const Text(
+          "Privacy Policy",
+          style: TextStyle(color: Colors.white),
+        ),
         centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios, color: Colors.white),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
       ),
-      body: Padding(
-        padding: EdgeInsets.only(left: 15.w, right: 15.w),
-        child: isLoading
-            ? const Center(child: CircularProgressIndicator())
-            : SingleChildScrollView(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    SizedBox(height: 40.h),
-                    Center(
-                      child: Text(
-                        privacyText ?? "No privacy policy available.",
-                        textAlign: TextAlign.justify,
-                        style: TextStyle(
-                          fontSize: 14.sp,
-                          fontFamily: 'Urbanist',
-                        ),
-                      ),
-                    ),
-                    SizedBox(height: 60.h),
-                  ],
-                ),
+      body: FutureBuilder<Map<String, dynamic>?>(
+        future: _getPolicy(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(
+                child: CircularProgressIndicator(color: AppColors.logocolor));
+          }
+
+          if (!snapshot.hasData || snapshot.data == null) {
+            return const Center(
+              child: Text(
+                "Privacy Policy not available.",
+                style: TextStyle(color: Colors.black),
               ),
+            );
+          }
+
+          final data = snapshot.data!;
+          final sections = (data["sections"] ?? []) as List<dynamic>;
+
+          return SingleChildScrollView(
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 20.h),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Text(
+                    data["heading"] ??
+                        "Privacy Policy",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.logocolor,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                SizedBox(height: 20.h),
+                for (var section in sections) ...[
+                  Text(
+                    section["heading"] ?? "",
+                    style: TextStyle(
+                      fontSize: 16.sp,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.logocolor,
+                    ),
+                  ),
+                  SizedBox(height: 5.h),
+                  Text(
+                    section["content"] ?? "",
+                    textAlign: TextAlign.justify,
+                    style: TextStyle(
+                      fontSize: 14.sp,
+                      color: Colors.black,
+                      height: 1.5,
+                    ),
+                  ),
+                  SizedBox(height: 15.h),
+                ],
+              ],
+            ),
+          );
+        },
       ),
     );
   }

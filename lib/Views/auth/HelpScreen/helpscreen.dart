@@ -1,3 +1,4 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:talk/constants/colors.dart';
@@ -17,26 +18,21 @@ class HelpScreen extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios,
-            color: Colors.white,
-          ),
+          icon: Icon(CupertinoIcons.back, color: Colors.white),
           onPressed: () {
-            Navigator.pop(context);
+            Navigator.of(context).pop();
           },
         ),
-        title: Center(
-          child: Text(
-            'Help Screen',
-            style: TextStyle(
-              fontSize: 20.sp,
-              color: Colors.white,
-              fontFamily: 'Urbanist',
-              fontWeight: FontWeight.bold,
-            ),
+        title: const Text(
+          'Help Screen',
+          style: TextStyle(
+            color: Colors.white,
+            fontFamily: 'Urbanist',
           ),
         ),
         backgroundColor: AppColors.logocolor,
+        elevation: 0,
+        centerTitle: true,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16.0),

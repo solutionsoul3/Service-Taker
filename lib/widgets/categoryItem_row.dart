@@ -7,6 +7,8 @@ class CategoryItem extends StatelessWidget {
 
   const CategoryItem({Key? key, required this.category}) : super(key: key);
 
+
+
   @override
   Widget build(BuildContext context) {
     final name = category['catename'] ?? '';
@@ -36,7 +38,7 @@ class CategoryItem extends StatelessWidget {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => ExploreCategory(category: category),
+              builder: (_) => ExploreCategory(category: category,  categoryName: name,),
             ),
           );
         },

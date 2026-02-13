@@ -1,14 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/svg.dart';
-import 'package:talk/Views/ChatScreen/chatscreen.dart';
-import 'package:talk/Views/FavScreen/favscreen.dart';
 import 'package:talk/Views/HomeScreen/homescreen.dart';
-import 'package:talk/Views/MyBookings/mybookings.dart';
 import 'package:talk/Views/ProfileScreen/aboutscreen.dart';
 import 'package:talk/constants/colors.dart';
 import 'package:talk/constants/image.dart';
 
 import '../CallScreen/call-screen.dart';
+import '../ChatScreen/chatscreen.dart';
 import '../ChatScreens/chat-screen.dart';
 import '../Explore_Screen/explore-screen.dart';
 
@@ -28,7 +26,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
     const ExploreScreen(),
 
     ChatScreen(),
-    const CallScreen(),
+    UserCallScreen(),
     const AboutScreen(),
   ];
 
@@ -101,7 +99,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       ? AppColors.logocolor
                       : Colors.grey,
                 ),
-                label: 'Message',
+                label: 'Chat',
               ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
@@ -112,7 +110,7 @@ class _BottomNavBarState extends State<BottomNavBar> {
                       ? AppColors.logocolor
                       : Colors.grey,
                 ),
-                label: 'Chats',
+                label: 'Call',
               ),
               BottomNavigationBarItem(
                 icon: SvgPicture.asset(
